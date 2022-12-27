@@ -15,7 +15,7 @@ export class Terrain extends THREE.Mesh {
         const vertexStride = options.resolution + 1;
         const vertexCount = Math.pow(vertexStride, 2);
         const vertices = new Float32Array(vertexCount * 3);
-        const normals = new Float32Array(vertexCount * 3);      
+        const normals = new Float32Array(vertexCount * 3);
         const colors = new Float32Array(vertexCount * 3);
 
         const normal = new THREE.Vector3(0, 1, 0);
@@ -46,19 +46,20 @@ export class Terrain extends THREE.Mesh {
         geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
+        const lastValidIndex = vertexStride * options.resolution - 1;
         const indices = Array.from(new Array(vertexCount))
             .reduce((acc, _, i) => {
-                if ((i + 1) % vertexStride === 0) {
+                if (i > lastValidIndex || (i + 1) % vertexStride === 0) {
                     return acc;
                 }
                 return [
-                    ...acc, 
+                    ...acc,
                     i + 0, i + 1, i + vertexStride,
                     i + 1, i + vertexStride + 1, i + vertexStride
                 ];
             }, []);
 
-        geometry.setIndex(indices);        
+        geometry.setIndex(indices);
         const material = new THREE.MeshPhongMaterial({ color: 0xffffff });
         material.vertexColors = true;
         super(geometry, material);
