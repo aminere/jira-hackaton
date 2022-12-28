@@ -25,14 +25,14 @@ export class CameraControls {
     constructor(props: ICameraControls) {        
         this.props = props;
         props.domElement.addEventListener('pointermove', this.onPointerMove.bind(this));
-        props.domElement.addEventListener('pointerover', this.onPointerOver.bind(this));
-        props.domElement.addEventListener('pointerout', this.onPointerOut.bind(this));
+        props.domElement.addEventListener('pointerenter', this.onPointerEnter.bind(this));
+        props.domElement.addEventListener('pointerleave', this.onPointerLeave.bind(this));
     }
 
     public dispose() {
         this.props.domElement.removeEventListener('pointermove', this.onPointerMove);
-        this.props.domElement.removeEventListener('pointerover', this.onPointerOver);
-        this.props.domElement.removeEventListener('pointerout', this.onPointerOut);
+        this.props.domElement.removeEventListener('pointerenter', this.onPointerEnter);
+        this.props.domElement.removeEventListener('pointerleave', this.onPointerLeave);
     }
 
     public update(deltaTime: number) {
@@ -86,11 +86,11 @@ export class CameraControls {
         }
     }
 
-    private onPointerOver() {
+    private onPointerEnter() {
         this.touchInside = true;
     }
 
-    private onPointerOut() {
+    private onPointerLeave() {
         this.touchInside = false;
     }
 }

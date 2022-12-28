@@ -18,11 +18,8 @@ export class PlayerControls {
 
     constructor(props: IPlayerControls) {
         this.props = props;
-
-        this.onKeyDown = this.onKeyDown.bind(this);
-        this.onKeyUp = this.onKeyUp.bind(this);
-        props.domElement.addEventListener('keydown', this.onKeyDown);
-        props.domElement.addEventListener('keyup', this.onKeyUp);        
+        props.domElement.addEventListener('keydown', this.onKeyDown.bind(this));
+        props.domElement.addEventListener('keyup', this.onKeyUp.bind(this));        
     }
 
     public dispose() {
