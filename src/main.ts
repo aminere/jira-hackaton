@@ -1,8 +1,6 @@
 
 import * as THREE from 'three';
-import { Planet } from './planet';
-
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { World } from './world';
 
 const renderer = new THREE.WebGLRenderer({
   canvas: document.getElementById('app') as HTMLCanvasElement,
@@ -18,22 +16,19 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.5;
 
 const camera = new THREE.PerspectiveCamera(60, width / height, .1, 100 );
-camera.position.set(0, 2, -5);
 
-const controls = new OrbitControls( camera, renderer.domElement );
-
-const scene = new Planet();
+const world = new World(camera, renderer.domElement);
 const clock = new THREE.Clock();
 
 function tick() {
   const deltaTime = clock.getDelta();
   
-  scene.update();
+  world.update(deltaTime);
 
-  renderer.render(scene, camera);
+  renderer.render(world, camera);
 
   requestAnimationFrame(tick);
 }
 
-scene.addEventListener("ready", tick);
+world.addEventListener("ready", tick);
 
