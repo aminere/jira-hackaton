@@ -1,60 +1,97 @@
 
 import { Object3D, Vector2, Vector3, MathUtils } from "three";
 
+interface ICameraControls {
+    camera: Object3D;
+    target: Object3D;
+    domElement: HTMLElement;
+}
+
 export class CameraControls {
 
-    private readonly domElement: HTMLElement;
-    private readonly camera: Object3D;
-    private readonly target: Object3D;
+    public get forward() { return this._forward; }
 
+    private readonly props: ICameraControls;
+    
     private readonly deltaTouch = new Vector2();
+    private touchPos: Vector2 | null = null;
     private previousTouch: Vector2 | null = null;
 
     private yaw = 0;
     private pitch = 0;
-    private forward = new Vector3();
+    private _forward = new Vector3();
+    private touchInside = false;
 
-    constructor(camera: Object3D, target: Object3D, domElement: HTMLElement) {        
-        this.camera = camera;
-        this.target = target;
-        this.domElement = domElement;
-        this.onPointerMove = this.onPointerMove.bind(this);
-        domElement.addEventListener('pointermove', this.onPointerMove);
+    constructor(props: ICameraControls) {        
+        this.props = props;
+        props.domElement.addEventListener('pointermove', this.onPointerMove.bind(this));
+        props.domElement.addEventListener('pointerover', this.onPointerOver.bind(this));
+        props.domElement.addEventListener('pointerout', this.onPointerOut.bind(this));
     }
 
     public dispose() {
-        this.domElement.removeEventListener('pointermove', this.onPointerMove);
+        this.props.domElement.removeEventListener('pointermove', this.onPointerMove);
+        this.props.domElement.removeEventListener('pointerover', this.onPointerOver);
+        this.props.domElement.removeEventListener('pointerout', this.onPointerOut);
     }
 
     public update(deltaTime: number) {
-        const sensitivity = 0.2;
+        const yawSpeed = 125;
+        const pitchSpeed = 10;
         const distFromTarget = 10;
-        const heightOffset = 1;
+        const heightOffset = 2;
+        const margin = 0.2;
 
-        this.yaw += this.deltaTouch.x * sensitivity;
-        this.pitch += this.deltaTouch.y * sensitivity;
+        if (this.touchInside) {
+            if (this.touchPos !== null) {
+                if (this.touchPos.x < margin) {
+                    this.yaw -= deltaTime * yawSpeed;
+                } else if (this.touchPos.x > 1 - margin) {
+                    this.yaw += deltaTime * yawSpeed;
+                }
+            }
+        }
+
+        this.pitch += this.deltaTouch.y * deltaTime * pitchSpeed;
         this.deltaTouch.set(0, 0);
 
-        this.pitch = MathUtils.clamp(this.pitch, -20, 30);
-        this.camera.rotation.set(MathUtils.DEG2RAD * -this.pitch, MathUtils.DEG2RAD * -this.yaw, 0, "YXZ");
-        this.camera.getWorldDirection(this.forward);
-        // this.camera.updateWorldMatrix(false, false);
-        // const e = this.camera.matrixWorld.elements;
-		// this.forward.set( -e[ 8 ], -e[ 9 ], -e[ 10 ] ).normalize();
+        this.pitch = MathUtils.clamp(this.pitch, -12, 70);
+        this.props.camera.rotation.set(MathUtils.DEG2RAD * -this.pitch, MathUtils.DEG2RAD * -this.yaw, 0, "YXZ");
+        this.props.camera.getWorldDirection(this._forward);
 
-        this.camera.position
+        this.props.camera.position
             .set(0, heightOffset, 0)
-            .addScaledVector(this.forward, -distFromTarget)
-            .add(this.target.position);
+            .addScaledVector(this._forward, -distFromTarget)
+            .add(this.props.target.position);
     }
 
     private onPointerMove(event: PointerEvent) {
+        if (!this.touchInside) {
+            return;
+        }
+
+        if (this.touchPos === null) {
+            this.touchPos = new Vector2();
+        }
+        this.touchPos.set(
+            event.clientX / this.props.domElement.clientWidth, 
+            event.clientY / this.props.domElement.clientHeight
+        );
+        
         if (this.previousTouch === null) {
             this.previousTouch = new Vector2(event.clientX, event.clientY);
         } else {
             this.deltaTouch.set(event.clientX, event.clientY).sub(this.previousTouch);
             this.previousTouch.set(event.clientX, event.clientY);
         }
+    }
+
+    private onPointerOver() {
+        this.touchInside = true;
+    }
+
+    private onPointerOut() {
+        this.touchInside = false;
     }
 }
 

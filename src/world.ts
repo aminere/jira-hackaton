@@ -24,20 +24,19 @@ export class World extends THREE.Scene {
 
         const light = new THREE.DirectionalLight(0xffffff, 1);
         light.position.set(0, 5, 0);
-        this.add(light);        
+        this.add(light);
 
         const player = new Player();
-        player.position.set(0, 2, 0);
+        player.position.set(0, 1, 0);
         this.add(player);
 
-        this.cameraControls = new CameraControls(camera, player, domElement);
-        camera.rotation.set(0, 0, 0);
+        this.cameraControls = new CameraControls({ camera, target: player, domElement });
         camera.position.set(0, 2, 10);
 
-        this.playerControls = new PlayerControls({ 
+        this.playerControls = new PlayerControls({
             target: player,
             domElement,
-            getCameraForward: () => new Vector3()
+            getCameraForward: () => this.cameraControls.forward
         });
 
         this.load();
@@ -56,9 +55,9 @@ export class World extends THREE.Scene {
         const matFolder = gui.addFolder('Material');
         matFolder.add(terrain.material, 'wireframe');
         matFolder.open();
-        
+
         const sky = new Sky();
-		sky.scale.setScalar( 450000 );
+        sky.scale.setScalar(450000);
         this.add(sky);
         const effectController = {
             turbidity: 10,
@@ -80,17 +79,17 @@ export class World extends THREE.Scene {
         sun.setFromSphericalCoords(1, Math.PI / 3, 0);
         uniforms['sunPosition'].value.copy(sun);
 
-        const waterGeometry = new THREE.PlaneGeometry( 100, 100 );
+        const waterGeometry = new THREE.PlaneGeometry(100, 100);
         const water = new Water(
             waterGeometry,
             {
                 textureWidth: 512,
                 textureHeight: 512,
-                waterNormals: new THREE.TextureLoader().load( 'assets/waternormals.jpg', function ( texture ) {
+                waterNormals: new THREE.TextureLoader().load('assets/waternormals.jpg', function (texture) {
 
                     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
-                } ),
+                }),
                 sunDirection: new THREE.Vector3(),
                 sunColor: 0xffffff,
                 waterColor: 0x001e0f,
@@ -101,14 +100,14 @@ export class World extends THREE.Scene {
         water.rotation.x = - Math.PI / 2;
         water.position.y = .3;
         // this.add( water );
-        water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
+        water.material.uniforms['sunDirection'].value.copy(sun).normalize();
 
         this.add(terrain);
         this.dispatchEvent({ type: "ready" });
     }
 
-    public update(deltaTime: number) {
-        this.playerControls.update(deltaTime);
+    public update(deltaTime: number) {        
         this.cameraControls.update(deltaTime);
+        this.playerControls.update(deltaTime);
     }
 }
