@@ -1,5 +1,4 @@
 
-import * as THREE from "three";
 
 import { Terrain } from './terrain';
 
@@ -10,19 +9,19 @@ import { PlayerControls } from './player-controls';
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { GUI } from 'dat.gui';
-import { Vector3 } from "three";
+import { Camera, DirectionalLight, MathUtils, Object3D, PlaneGeometry, RepeatWrapping, Scene, TextureLoader, Vector3 } from "three";
+import { GUI } from "dat.gui";
 
-export class World extends THREE.Scene {
+export class World extends Scene {
 
     private player!: Player;
     private playerControls!: PlayerControls;
     private cameraControls!: CameraControls;
 
-    constructor(camera: THREE.Camera, domElement: HTMLElement) {
+    constructor(camera: Camera, domElement: HTMLElement, gui: GUI) {
         super();
 
-        const light = new THREE.DirectionalLight(0xffffff, 1);
+        const light = new DirectionalLight(0xffffff, 1);
         light.position.set(0, 5, 0);
         this.add(light);
 
@@ -39,70 +38,87 @@ export class World extends THREE.Scene {
             getCameraForward: () => this.cameraControls.forward
         });
 
+        const terrain = new Terrain({
+            cellSize: .5,
+            resolution: 32
+        }); 
+        this.add(terrain);
+
+        this.addSky(player, gui);
+
         this.load();
+    }
+
+    private addSky(parent: Object3D, gui: GUI) {
+        const sky = new Sky();
+        sky.scale.setScalar(10000);
+        parent.add(sky);
+
+        const uniforms = sky.material.uniforms;
+
+        const skySettings = {
+            turbidity: 0.1,
+            rayleigh: 0.194,
+            mieCoefficient: 0.003,
+            mieDirectionalG: 0.975            
+        };
+
+        const sunSettings = {
+            elevation: 32,
+            azimuth: 180
+        };
+
+        const skyFolder = gui.addFolder('Sky');
+
+        function onSkySettingsChanged() {
+            Object.entries(skySettings).forEach(([key, value]) => uniforms[key].value = value);
+        }
+
+        function onSunSettingsChanged() {
+            const phi = MathUtils.degToRad(90 - sunSettings.elevation);
+            const theta = MathUtils.degToRad(sunSettings.azimuth);        
+            uniforms['sunPosition'].value.setFromSphericalCoords(1, phi, theta);
+        }
+
+        onSkySettingsChanged();
+        onSunSettingsChanged();
+
+        skyFolder.add(sunSettings, 'elevation', 0, 90, 0.1).onChange(onSunSettingsChanged)
+        skyFolder.add(sunSettings, 'azimuth', -180, 180, 0.1).onChange(onSunSettingsChanged)
+        skyFolder.add(skySettings, 'turbidity', 0.0, 20.0, 0.1).onChange(onSkySettingsChanged);
+        skyFolder.add(skySettings, 'rayleigh', 0.0, 4, 0.001).onChange(onSkySettingsChanged);
+        skyFolder.add(skySettings, 'mieCoefficient', 0.0, 0.1, 0.001).onChange(onSkySettingsChanged);
+        skyFolder.add(skySettings, 'mieDirectionalG', 0.0, 1, 0.001).onChange(onSkySettingsChanged);
+        skyFolder.open();
     }
 
     private async load() {
 
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise(resolve => setTimeout(resolve, 1));                 
 
-        const terrain = new Terrain({
-            cellSize: .5,
-            resolution: 32
-        });
+        // const waterGeometry = new PlaneGeometry(100, 100);
+        // const water = new Water(
+        //     waterGeometry,
+        //     {
+        //         textureWidth: 512,
+        //         textureHeight: 512,
+        //         waterNormals: new TextureLoader().load('assets/waternormals.jpg', function (texture) {
 
-        const gui = new GUI();
-        const matFolder = gui.addFolder('Material');
-        matFolder.add(terrain.material, 'wireframe');
-        matFolder.open();
+        //             texture.wrapS = texture.wrapT = RepeatWrapping;
 
-        const sky = new Sky();
-        sky.scale.setScalar(450000);
-        this.add(sky);
-        const effectController = {
-            turbidity: 10,
-            rayleigh: 3,
-            mieCoefficient: 0.005,
-            mieDirectionalG: 0.7,
-            elevation: 90,
-            azimuth: 180,
-            exposure: 0.5
-        };
-        const uniforms = sky.material.uniforms;
-        // uniforms['turbidity'].value = effectController.turbidity;
-        // uniforms['rayleigh'].value = effectController.rayleigh;
-        // uniforms['mieCoefficient'].value = effectController.mieCoefficient;
-        // uniforms['mieDirectionalG'].value = effectController.mieDirectionalG;
-        // const phi = THREE.MathUtils.degToRad(90 - effectController.elevation);
-        // const theta = THREE.MathUtils.degToRad(effectController.azimuth);
-        const sun = new THREE.Vector3();
-        sun.setFromSphericalCoords(1, Math.PI / 3, 0);
-        uniforms['sunPosition'].value.copy(sun);
-
-        const waterGeometry = new THREE.PlaneGeometry(100, 100);
-        const water = new Water(
-            waterGeometry,
-            {
-                textureWidth: 512,
-                textureHeight: 512,
-                waterNormals: new THREE.TextureLoader().load('assets/waternormals.jpg', function (texture) {
-
-                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-
-                }),
-                sunDirection: new THREE.Vector3(),
-                sunColor: 0xffffff,
-                waterColor: 0x001e0f,
-                distortionScale: 3.7,
-                fog: false
-            }
-        );
-        water.rotation.x = - Math.PI / 2;
-        water.position.y = .3;
+        //         }),
+        //         sunDirection: new Vector3(),
+        //         sunColor: 0xffffff,
+        //         waterColor: 0x001e0f,
+        //         distortionScale: 3.7,
+        //         fog: false
+        //     }
+        // );
+        // water.rotation.x = - Math.PI / 2;
+        // water.position.y = .3;
         // this.add( water );
-        water.material.uniforms['sunDirection'].value.copy(sun).normalize();
-
-        this.add(terrain);
+        // water.material.uniforms['sunDirection'].value.copy(sun).normalize();
+        
         this.dispatchEvent({ type: "ready" });
     }
 
