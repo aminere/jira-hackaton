@@ -43,7 +43,7 @@ export class World extends Scene {
         this.playerControls = new PlayerControls({
             target: player,
             domElement,
-            // getCameraForward: () => this.cameraControls.forward,
+            getCameraForward: () => this.cameraControls.forward,
             // getCameraRight: () => this.cameraControls.right
         });
 
