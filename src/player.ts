@@ -1,9 +1,10 @@
 
-import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry } from "three";
-import { PlayerControls } from "./player-controls";
+import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3 } from "three";
 
 export class Player extends Object3D {
-    private readonly controls!: PlayerControls;
+
+    public readonly right = new Vector3(1, 0, 0);
+    public readonly forward = new Vector3(0, 0, 1);
 
     constructor() {
         super();
@@ -15,12 +16,9 @@ export class Player extends Object3D {
         const head = new SphereGeometry(1);
         const headMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
         const headMesh = new Mesh(head, headMaterial);
-        headMesh.position.z = -1;
+        headMesh.position.z = 1;
 
         this.add(mesh);
         this.add(headMesh);
-    }
-
-    public update(deltaTime: number) {
     }
 }

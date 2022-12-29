@@ -1,10 +1,12 @@
 
-import { Matrix4, Object3D, Vector3 } from "three";
+import { Matrix4, Vector3 } from "three";
+import { Player } from "./player";
 
 interface IPlayerControls {
-    target: Object3D;
+    target: Player;
     domElement: HTMLElement;
-    getCameraForward: () => Vector3;
+    // getCameraForward: () => Vector3;
+    // getCameraRight: () => Vector3;
 }
 
 export class PlayerControls {
@@ -13,7 +15,10 @@ export class PlayerControls {
 
     private readonly keyStates: Map<string, boolean> = new Map<string, boolean>();
 
-    private readonly right = new Vector3();
+    // private readonly right = new Vector3(1, 0, 0);
+    // private readonly forward = new Vector3(0, 0, 1);
+    // private readonly up = new Vector3(0, 1, 0);
+
     private readonly velocity = new Vector3();
 
     constructor(props: IPlayerControls) {
@@ -28,6 +33,8 @@ export class PlayerControls {
     }
     
     public update(deltaTime: number) {
+
+        // console.log(this.props.target.getWorldDirection(new Vector3()));
 
         let motion = false;
         let forwardMotion = 0;
@@ -50,21 +57,45 @@ export class PlayerControls {
         if (motion) {
             const speed = 10;
 
-            const forward = this.props.getCameraForward();
-            this.right.crossVectors(this.props.target.up, forward);
-            this.velocity.set(
-                forward.x * forwardMotion + this.right.x * lateralMotion,
-                0,
-                forward.z * forwardMotion + this.right.z * lateralMotion
-            ).normalize();
-            
-            this.props.target.position.addScaledVector(this.velocity, deltaTime * speed);
+            // const forward = this.props.getCameraForward();
+            // this.right.crossVectors(this.props.target.up, forward);
+            // this.velocity.set(
+            //     forward.x * forwardMotion + this.right.x * lateralMotion,
+            //     0,
+            //     forward.z * forwardMotion + this.right.z * lateralMotion
+            // ).normalize();            
 
-            const lookAt = new Matrix4().lookAt(
-                new Vector3(),
-                new Vector3(forward.x, 0, forward.z).normalize(),
-                this.props.target.up
-            );
+            const { target } = this.props;
+
+            this.velocity
+                .set(0, 0, 0)
+                .addScaledVector(target.forward, forwardMotion)
+                .addScaledVector(target.right, lateralMotion)
+                .normalize();            
+            const newPos = new Vector3().copy(this.props.target.position).addScaledVector(this.velocity, deltaTime * speed);
+            newPos.normalize();
+
+            if (forwardMotion !== 0) {
+                const toCurrentPos = new Vector3().copy(this.props.target.position).normalize();
+                const newRight = new Vector3().crossVectors(toCurrentPos, newPos)
+                    .multiplyScalar(forwardMotion)
+                    .normalize();
+                const newUp = newPos;
+                const newForward = new Vector3().crossVectors(newRight, newUp).normalize();
+                target.forward.copy(newForward);
+                target.right.copy(newRight);
+                target.up.copy(newUp);
+            } else {
+                const newUp = newPos;
+                const newRight = new Vector3().crossVectors(newUp, target.forward).normalize();
+                target.right.copy(newRight);
+                target.up.copy(newUp);
+            }
+
+            newPos.multiplyScalar(4);
+            this.props.target.position.copy(newPos);
+
+            const lookAt = new Matrix4().lookAt(new Vector3(), new Vector3().copy(target.forward).multiplyScalar(-1), target.up);
             this.props.target.quaternion.setFromRotationMatrix(lookAt);
         }
     }

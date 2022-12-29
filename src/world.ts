@@ -12,6 +12,8 @@ import { Player } from './player';
 import { Camera, DirectionalLight, MathUtils, Object3D, PlaneGeometry, RepeatWrapping, Scene, TextureLoader, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+
 export class World extends Scene {
 
     private player!: Player;
@@ -26,22 +28,32 @@ export class World extends Scene {
         this.add(light);
 
         const player = new Player();
-        player.position.set(0, 1, 0);
-        this.add(player);
+        player.position.set(0, 4, 0);
+        this.add(player);        
 
-        this.cameraControls = new CameraControls({ camera, target: player, domElement });
-        camera.position.set(0, 2, 10);
+        this.cameraControls = new CameraControls({ 
+            camera, 
+            target: player,
+            domElement 
+        });
+        
+        // camera.position.set(0, 8, -10);
+        // new OrbitControls(camera, domElement);        
 
         this.playerControls = new PlayerControls({
             target: player,
             domElement,
-            getCameraForward: () => this.cameraControls.forward
+            // getCameraForward: () => this.cameraControls.forward,
+            // getCameraRight: () => this.cameraControls.right
         });
 
-        const terrain = new Terrain({
-            cellSize: .5,
-            resolution: 32
-        }); 
+        const terrain = new Terrain(
+            {
+                cellSize: .5,
+                resolution: 32
+            },
+            gui
+        ); 
         this.add(terrain);
 
         this.addSky(player, gui);
@@ -89,7 +101,7 @@ export class World extends Scene {
         skyFolder.add(skySettings, 'rayleigh', 0.0, 4, 0.001).onChange(onSkySettingsChanged);
         skyFolder.add(skySettings, 'mieCoefficient', 0.0, 0.1, 0.001).onChange(onSkySettingsChanged);
         skyFolder.add(skySettings, 'mieDirectionalG', 0.0, 1, 0.001).onChange(onSkySettingsChanged);
-        skyFolder.open();
+        // skyFolder.open();
     }
 
     private async load() {
@@ -122,8 +134,8 @@ export class World extends Scene {
         this.dispatchEvent({ type: "ready" });
     }
 
-    public update(deltaTime: number) {        
-        this.cameraControls.update(deltaTime);
+    public update(deltaTime: number) {
         this.playerControls.update(deltaTime);
+        this.cameraControls.update(deltaTime);
     }
 }
