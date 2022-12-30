@@ -13,6 +13,7 @@ import { BoxGeometry, Camera, DirectionalLight, Euler, MathUtils, Matrix4, Mesh,
 import { GUI } from "dat.gui";
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 
 export class World extends Scene {
 
@@ -40,8 +41,9 @@ export class World extends Scene {
             domElement 
         });
         
-        camera.position.set(0, 5, -10);
-        new OrbitControls(camera, domElement);
+        camera.position.set(2, 5, -10);
+        const orbit = new OrbitControls(camera, domElement);
+        orbit.enabled = false;
 
         this.playerControls = new PlayerControls({
             target: player,
@@ -63,6 +65,7 @@ export class World extends Scene {
 
         this.load();
 
+        const realRoot = new Object3D();
         const root = new Object3D();
         const joint1 = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0xff0000 }));
         const joint2 = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0xff0000 }));
@@ -79,38 +82,20 @@ export class World extends Scene {
         joint2.add(join2Mesh);
         joint2.add(end);
         root.add(joint1);
-        this.add(root);
+        realRoot.add(root);
+        this.add(realRoot);
 
-        const target = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0x0000ff }));        
-        this.add(target);
+        const effector = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0x0000ff }));        
+        this.add(effector);
+        effector.position.z = 5;
 
-        const debug = {
-            rootAngle: 0,
-            joint1Angle: 0,
-            joint2Angle: 0,
-            effectorX: 0,
-            effectorY: 3.8,
-            effectorZ: 1
-        };
-
-        target.position.z = debug.effectorZ;
-
-        function debugChanged() {
-            target.position.set(debug.effectorX, debug.effectorY, debug.effectorZ);
-
-            // const rootLookAt = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), MathUtils.degToRad(debug.rootAngle));
-            // root.quaternion.copy(rootLookAt);
-            // const aRotation = new Quaternion().setFromEuler(new Euler(MathUtils.degToRad(debug.joint1Angle), 0, 0));
-            // const bRotation = new Quaternion().setFromEuler(new Euler(MathUtils.degToRad(debug.joint2Angle), 0, 0));
-            // joint1.quaternion.copy(aRotation);
-            // joint2.quaternion.copy(bRotation);
-
-            const localPos = new Vector3().copy(target.position).sub(root.position);
+        function updateIK() {
+            const localPos = realRoot.worldToLocal(effector.position.clone()); //  new Vector3().copy(effector.position).sub(root.getWorldPosition(new Vector3()));
             const angle = Math.atan2(localPos.x, localPos.z);
             const rootLookAt = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), angle);
             root.quaternion.copy(rootLookAt);
 
-            const localJointPos = root.worldToLocal(target.position.clone());
+            const localJointPos = root.worldToLocal(effector.position.clone());
             const ab = new Vector3().subVectors(joint2.getWorldPosition(new Vector3()), joint1.getWorldPosition(new Vector3())).length();
             const bc = new Vector3().subVectors(joint2.getWorldPosition(new Vector3()), end.getWorldPosition(new Vector3())).length();
             const at = localJointPos.length();
@@ -138,13 +123,25 @@ export class World extends Scene {
             joint2.quaternion.copy(bRotation);
         }
 
-        debugChanged();
-        // gui.add(debug, "rootAngle", 0, 360, 1).onChange(debugChanged);
-        // gui.add(debug, "joint1Angle", 0, 360, 1).onChange(debugChanged);
-        // gui.add(debug, "joint2Angle", 0, 360, 1).onChange(debugChanged);
-        gui.add(debug, "effectorX", -10, 10, .1).onChange(debugChanged);
-        gui.add(debug, "effectorY", -10, 10, .1).onChange(debugChanged);
-        gui.add(debug, "effectorZ", -10, 10, .1).onChange(debugChanged);
+        updateIK();        
+
+        const effectorControls = new TransformControls(camera, domElement).attach(effector);
+        effectorControls.setMode("translate");
+        effectorControls.addEventListener("objectChange", updateIK);
+        this.add(effectorControls);
+
+        const rootControls = new TransformControls(camera, domElement).attach(realRoot);
+        rootControls.setMode("translate");
+        rootControls.addEventListener("objectChange", updateIK);
+        this.add(rootControls);
+
+        const config = {
+            mode: "translate"
+        };
+
+        gui.add(config, "mode", ["translate", "rotate", "scale"]).onChange(value => {
+            rootControls.setMode(value);
+        });
     }
 
     private addSky(parent: Object3D, gui: GUI) {
