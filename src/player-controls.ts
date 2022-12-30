@@ -71,7 +71,7 @@ export class PlayerControls {
 
             const { target } = this.props;
 
-            if (forwardMotion !== 0) {
+            if (motion) {
                 target.forward.copy(this.props.getCameraForward());
                 target.right.crossVectors(target.up, target.forward);
                 this.props.resetYaw();
