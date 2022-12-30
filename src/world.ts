@@ -9,7 +9,7 @@ import { PlayerControls } from './player-controls';
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { Camera, DirectionalLight, MathUtils, Object3D, PlaneGeometry, RepeatWrapping, Scene, TextureLoader, Vector3 } from "three";
+import { BoxGeometry, Camera, DirectionalLight, MathUtils, Matrix4, Mesh, MeshBasicMaterial, Object3D, PlaneGeometry, Quaternion, RepeatWrapping, Scene, SphereGeometry, TextureLoader, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
@@ -23,12 +23,13 @@ export class World extends Scene {
     constructor(camera: Camera, domElement: HTMLElement, gui: GUI) {
         super();
 
+        const radius = 50;
+
         const light = new DirectionalLight(0xffffff, 1);
-        light.position.set(0, 5, 0);
+        light.position.set(0, radius + 5, 0);
         this.add(light);
 
         const player = new Player();
-        player.position.set(0, 4, 0);
         this.add(player);        
 
         this.cameraControls = new CameraControls({ 
@@ -38,25 +39,25 @@ export class World extends Scene {
         });
         
         // camera.position.set(0, 8, -10);
-        // new OrbitControls(camera, domElement);        
+        // new OrbitControls(camera, domElement);
 
         this.playerControls = new PlayerControls({
             target: player,
             domElement,
+            radius,
             getCameraForward: () => this.cameraControls.forward,
-            // getCameraRight: () => this.cameraControls.right
+            resetYaw: () => this.cameraControls.resetYaw()
         });
 
         const terrain = new Terrain(
             {
-                cellSize: .5,
-                resolution: 32
+                radius
             },
             gui
         ); 
         this.add(terrain);
 
-        this.addSky(player, gui);
+        this.addSky(player, gui);        
 
         this.load();
     }
@@ -135,7 +136,7 @@ export class World extends Scene {
     }
 
     public update(deltaTime: number) {
-        this.playerControls.update(deltaTime);
         this.cameraControls.update(deltaTime);
+        this.playerControls.update(deltaTime);
     }
 }

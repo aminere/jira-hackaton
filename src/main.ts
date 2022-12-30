@@ -16,7 +16,7 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.5;
 
-const camera = new THREE.PerspectiveCamera(60, width / height, .1, 100 );
+const camera = new THREE.PerspectiveCamera(80, width / height, .1, 100 );
 
 const gui = new GUI();
 

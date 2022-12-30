@@ -5,12 +5,11 @@ import { MathUtils } from 'three';
 import { PerlinNoise } from './perlin-noise';
 
 interface ITerrainOptions {
-    cellSize: number;
-    resolution: number;
+    radius: number;
 }
 
 export class Terrain extends THREE.Mesh {
-    public constructor(options: ITerrainOptions, gui: GUI) {
+    public constructor(props: ITerrainOptions, gui: GUI) {
 
         // const geometry = new THREE.BufferGeometry();
 
@@ -68,7 +67,7 @@ export class Terrain extends THREE.Mesh {
             flatShading: true, 
             vertexColors: true 
         });
-        const sphere = new THREE.IcosahedronGeometry(4, 5);
+        const sphere = new THREE.IcosahedronGeometry(props.radius, 5);
 
         const _vertices = sphere.getAttribute('position');
         const colors = new Float32Array(_vertices.count * 3);

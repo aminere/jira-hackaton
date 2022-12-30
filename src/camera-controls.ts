@@ -1,5 +1,5 @@
 
-import { Object3D, Vector2, Vector3, MathUtils } from "three";
+import { Object3D, Vector2, Vector3, MathUtils, Quaternion, Matrix4 } from "three";
 import { Player } from "./player";
 
 interface ICameraControls {
@@ -20,7 +20,7 @@ export class CameraControls {
     private touchPos: Vector2 | null = null;
     private previousTouch: Vector2 | null = null;    
 
-    private yaw = 180;
+    private yaw = 0;
     private pitch = 0;    
     private touchInside = false;
 
@@ -40,16 +40,16 @@ export class CameraControls {
     public update(deltaTime: number) {
         const yawSpeed = 125;
         const pitchSpeed = 10;
-        const distFromTarget = 10;
-        const heightOffset = 2;
+        const distFromTarget = 3;
+        const heightOffset = 4;
         const margin = 0.2;
 
         if (this.touchInside) {
             if (this.touchPos !== null) {
                 if (this.touchPos.x < margin) {
-                    this.yaw -= deltaTime * yawSpeed;
-                } else if (this.touchPos.x > 1 - margin) {
                     this.yaw += deltaTime * yawSpeed;
+                } else if (this.touchPos.x > 1 - margin) {
+                    this.yaw -= deltaTime * yawSpeed;
                 }
             }
         }
@@ -61,16 +61,25 @@ export class CameraControls {
 
         const { camera, target } = this.props;
 
-        // const yawRotation = new Quaternion().setFromAxisAngle(target.up, -this.yaw * MathUtils.DEG2RAD);
-        // const pitchRotation = new Quaternion().setFromAxisAngle(target.right, -this.pitch * MathUtils.DEG2RAD);        
-        // camera.quaternion.multiplyQuaternions(yawRotation, pitchRotation);
+        const yawRotation = new Quaternion().setFromAxisAngle(target.up, this.yaw * MathUtils.DEG2RAD);
+        const pitchRotation = new Quaternion().setFromAxisAngle(target.right, this.pitch * MathUtils.DEG2RAD);        
+        const rotation = new Quaternion().multiplyQuaternions(yawRotation, pitchRotation);
+        const newForward = new Vector3().copy(target.forward).applyQuaternion(rotation).normalize();
 
-        this.props.camera.rotation.set(MathUtils.DEG2RAD * -this.pitch, MathUtils.DEG2RAD * -this.yaw, 0, "YXZ"); 
-        camera.getWorldDirection(this._forward);
-        camera.position
-            .set(0, heightOffset, 0)
-            .addScaledVector(this._forward, -distFromTarget)
+        camera.position.set(0, 0, 0)
+            .addScaledVector(target.up, heightOffset)
+            .addScaledVector(newForward, -distFromTarget)
             .add(target.position);
+
+        const toPlayer = new Vector3().copy(target.position).sub(camera.position).normalize();
+        const lookAt = new Matrix4().lookAt(new Vector3(), toPlayer, target.up);
+        camera.quaternion.setFromRotationMatrix(lookAt);
+
+        this._forward.copy(target.forward).applyQuaternion(yawRotation).normalize();
+    }
+
+    public resetYaw() {
+        this.yaw = 0;
     }
 
     private onPointerMove(event: PointerEvent) {
