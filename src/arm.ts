@@ -9,8 +9,8 @@ export class Arm extends Object3D {
     constructor(effector: Object3D, boneLength: number) {
         super();
         this.root = new Object3D();
-        const joint1 = new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0xff0000 }));
-        const joint2 = new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0xff0000 }));
+        const joint1 = new Mesh(new SphereGeometry(.1), new MeshBasicMaterial({ color: 0x0000ff }));
+        const joint2 = new Mesh(new SphereGeometry(.1), new MeshBasicMaterial({ color: 0x0000ff }));
         const end = new Object3D();        
         end.position.z = boneLength;
         joint2.position.z = boneLength;
@@ -18,7 +18,7 @@ export class Arm extends Object3D {
         join1Mesh.position.z = boneLength / 2;
         const join2Mesh = new Mesh(new BoxGeometry(.2, .2, boneLength), new MeshBasicMaterial({ color: 0x00ff00 }));
         join2Mesh.position.z = boneLength / 2;
-        end.add(new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0xff0000 })));
+        // end.add(new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0xff0000 })));
         joint2.add(end);
         joint2.add(join2Mesh);
         joint1.add(joint2);
