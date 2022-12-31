@@ -3,15 +3,11 @@ import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3
 import { Arm } from "./arm";
 import { IContext } from "./types";
 
-interface IArmAnimation {
-    sourcePos: Vector3;
-    arm: IArm;
-}
-
 interface IArm {
     arm: Arm;
     effector: Object3D;
     referenceEffector: Object3D;
+    animationSource: Vector3;
 }
 
 interface IPlayer {
@@ -33,10 +29,11 @@ export class Player extends Object3D {
     private stepDistance = 0;
 
     private arms!: IArm[];
-    private armAnimations!: IArmAnimation[];
     private armCouples = [[0, 3], [1, 2]]; // couples of arms to animate together
     private currentArmCouple = 0;
-    private isAnimating = false;
+    private idleAnims = 0;
+    private walkAnimationActive = false;
+    private animationProgress = 0;
 
     private readonly _root = new Object3D();
     private readonly props: IPlayer;
@@ -68,8 +65,6 @@ export class Player extends Object3D {
             this.createArm(new Vector3(-0.6, 0, -0.5), new Vector3(-1.5, 0, -2))
         ];
 
-        this.armAnimations = this.arms.map(arm => ({ sourcePos: new Vector3(), arm }));
-
         props.context.domElement.addEventListener('keydown', this.onKeyDown.bind(this));
         props.context.domElement.addEventListener('keyup', this.onKeyUp.bind(this)); 
     }
@@ -80,13 +75,14 @@ export class Player extends Object3D {
     }
 
     private createArm(position: Vector3, effectorPosition: Vector3): IArm {
-        const armLength = 1.5;
+        const bone1Length = 1;
+        const bone2Length = 1.2;
 
         const effector = new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0x0000ff }));
         effector.position.copy(effectorPosition).add(this.root.position);
         this.add(effector); // not added to the root, so it's not affected by player motion
         
-        const arm = new Arm(effector, armLength);
+        const arm = new Arm(effector, bone1Length, bone2Length);
         arm.position.copy(position);
         this._root.add(arm);
 
@@ -98,7 +94,8 @@ export class Player extends Object3D {
         return { 
             arm, 
             effector, 
-            referenceEffector            
+            referenceEffector,
+            animationSource: new Vector3()
         };
     }
 
@@ -172,40 +169,67 @@ export class Player extends Object3D {
             // walk cycle
             const distance = previousPos.distanceTo(this.root.position);
             this.stepDistance += distance;
-            const stepSize = 1.6;
+            const stepSize = 1.2;
             let stepProgress = this.stepDistance / stepSize;
             if (stepProgress > 1) {
                 this.stepDistance = this.stepDistance - stepSize;
                 stepProgress = stepProgress - 1;
                 const [arm1, arm2] = this.armCouples[this.currentArmCouple];
-                this.updateAnimation(this.armAnimations[arm1], 1);
-                this.updateAnimation(this.armAnimations[arm2], 1);
+                this.updateAnimation(arm1, 1, 0);
+                this.updateAnimation(arm2, 1, 0);
+                this.animationProgress = 1;
+                this.walkAnimationActive = false;
                 this.currentArmCouple = (this.currentArmCouple + 1) % this.armCouples.length;
-                this.isAnimating = false;
             }
 
             const [arm1, arm2] = this.armCouples[this.currentArmCouple];
-            if (!this.isAnimating) {
-                this.armAnimations[arm1].sourcePos = this.arms[arm1].effector.getWorldPosition(new Vector3());                    
-                this.armAnimations[arm2].sourcePos = this.arms[arm2].effector.getWorldPosition(new Vector3());
-                this.isAnimating = true;
+            if (!this.walkAnimationActive) {
+                this.arms[arm1].effector.getWorldPosition(this.arms[arm1].animationSource);
+                this.arms[arm2].effector.getWorldPosition(this.arms[arm2].animationSource);
+                this.walkAnimationActive = true;
             }
-            this.updateAnimation(this.armAnimations[arm1], stepProgress);
-            this.updateAnimation(this.armAnimations[arm2], stepProgress);
+            this.updateAnimation(arm1, stepProgress, 1);
+            this.updateAnimation(arm2, stepProgress, 1);
+            this.animationProgress = stepProgress;
+            this.idleAnims = 2;
+
+        } else {
+            if (this.idleAnims > 0) {
+                const idleAnimationSpeed = 4;
+                let [arm1, arm2] = this.armCouples[this.currentArmCouple];  
+                let done = false;
+                this.animationProgress += deltaTime * idleAnimationSpeed;
+                if (this.animationProgress > 1) {
+                    this.animationProgress = 1;
+                    done = true;
+                }
+                this.updateAnimation(arm1, this.animationProgress, 0);
+                this.updateAnimation(arm2, this.animationProgress, 0);
+                if (done) {
+                    this.idleAnims--;
+                    if (this.idleAnims > 0) {
+                        this.animationProgress = 0;
+                        this.currentArmCouple = (this.currentArmCouple + 1) % this.armCouples.length;
+                        let [arm1, arm2] = this.armCouples[this.currentArmCouple];  
+                        this.arms[arm1].effector.getWorldPosition(this.arms[arm1].animationSource);
+                        this.arms[arm2].effector.getWorldPosition(this.arms[arm2].animationSource);
+                    }
+                }
+            }            
         }
 
         this.arms.forEach(({ arm }) => arm.update());
     }
 
-    private updateAnimation(animation: IArmAnimation, progress: number) {
-        const { arm } = animation;
-        const targetPos = arm.referenceEffector
+    private updateAnimation(index: number, progress: number, anticipation: number) {        
+        const { animationSource, effector, referenceEffector } = this.arms[index];
+        const targetPos = referenceEffector
             .getWorldPosition(new Vector3())
-            .addScaledVector(this.velocity, 1);
-        arm.effector.position.lerpVectors(animation.sourcePos, targetPos, progress);
+            .addScaledVector(this.velocity, anticipation);
+        effector.position.lerpVectors(animationSource, targetPos, progress);
 
         const stepHeight = .3;
-        arm.effector.position.addScaledVector(this.up, Math.sin(progress * Math.PI) * stepHeight);
+        effector.position.addScaledVector(this.up, Math.sin(progress * Math.PI) * stepHeight);
     }
 
     private onKeyDown(event: KeyboardEvent) {  
