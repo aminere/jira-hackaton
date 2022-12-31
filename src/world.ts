@@ -4,21 +4,18 @@ import { Terrain } from './terrain';
 
 import { Sky } from "three/examples/jsm/objects/Sky";
 
-import { PlayerControls } from './player-controls';
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { DirectionalLight, MathUtils, Mesh, MeshBasicMaterial, Object3D, Scene, SphereGeometry } from "three";
+import { DirectionalLight, MathUtils, Object3D, Scene, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext } from './types';
-import { TransformControls } from 'three/examples/jsm/controls/TransformControls';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 export class World extends Scene {
 
     private player!: Player;
-    private playerControls!: PlayerControls;
     private cameraControls!: CameraControls;
 
     constructor(context: IContext) {
@@ -26,7 +23,13 @@ export class World extends Scene {
 
         const radius = 50;
 
-        this.player = new Player(context, radius);
+        this.player = new Player({
+            context,
+            position: new Vector3(0, radius, 0),
+            getCameraForward: () => this.cameraControls.forward,
+            resetCameraYaw: () => this.cameraControls.resetYaw(),
+            changeCameraYaw: (direction: number) => this.cameraControls.changeYaw(direction)          
+        });
         this.add(this.player);
         
         const light = new DirectionalLight(0xffffff, 1);
@@ -37,18 +40,9 @@ export class World extends Scene {
 
         this.cameraControls = new CameraControls({ context, target: this.player });
         
-        context.camera.position.set(2, 5, -10);
-        const orbit = new OrbitControls(context.camera, context.domElement);
-        orbit.enabled = false;
-
-        this.playerControls = new PlayerControls({
-            target: this.player,
-            context,
-            radius,
-            getCameraForward: () => this.cameraControls.forward,
-            resetYaw: () => this.cameraControls.resetYaw(),
-            changeYaw: (direction: number) => this.cameraControls.changeYaw(direction)
-        });
+        // context.camera.position.set(2, 5, -10);
+        // const orbit = new OrbitControls(context.camera, context.domElement);
+        // orbit.enabled = false;        
 
         const terrain = new Terrain({ radius }); 
         this.add(terrain);
@@ -133,7 +127,6 @@ export class World extends Scene {
 
     public update(deltaTime: number) {
         this.cameraControls.update(deltaTime);
-        this.playerControls.update(deltaTime);
-        this.player.update();
+        this.player.update(deltaTime);
     }
 }

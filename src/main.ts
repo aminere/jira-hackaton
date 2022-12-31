@@ -16,20 +16,15 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.5;
 
-const camera = new THREE.PerspectiveCamera(80, width / height, .1, 100 );
-
+const camera = new THREE.PerspectiveCamera(80, width / height, .1, 100);
 const gui = new GUI();
-
 const world = new World({ camera, domElement: renderer.domElement, gui });
 const clock = new THREE.Clock();
 
 function tick() {
-  const deltaTime = clock.getDelta();
-  
+  const deltaTime = clock.getDelta();  
   world.update(deltaTime);
-
   renderer.render(world, camera);
-
   requestAnimationFrame(tick);
 }
 
