@@ -1,11 +1,11 @@
 
-import { Object3D, Vector2, Vector3, MathUtils, Quaternion, Matrix4 } from "three";
+import { Vector2, Vector3, MathUtils, Quaternion, Matrix4 } from "three";
 import { Player } from "./player";
+import { IContext } from "./types";
 
 interface ICameraControls {
-    camera: Object3D;
-    target: Player;
-    domElement: HTMLElement;
+    context: IContext;    
+    target: Player;    
 }
 
 export class CameraControls {
@@ -18,7 +18,8 @@ export class CameraControls {
 
     private readonly deltaTouch = new Vector2();
     private touchPos: Vector2 | null = null;
-    private previousTouch: Vector2 | null = null;    
+    private previousTouch: Vector2 | null = null;
+    private yawChange = 0;
 
     private yaw = 0;
     private pitch = 0;    
@@ -26,15 +27,15 @@ export class CameraControls {
 
     constructor(props: ICameraControls) {        
         this.props = props;
-        props.domElement.addEventListener('pointermove', this.onPointerMove.bind(this));
-        props.domElement.addEventListener('pointerenter', this.onPointerEnter.bind(this));
-        props.domElement.addEventListener('pointerleave', this.onPointerLeave.bind(this));
+        props.context.domElement.addEventListener('pointermove', this.onPointerMove.bind(this));
+        props.context.domElement.addEventListener('pointerenter', this.onPointerEnter.bind(this));
+        props.context.domElement.addEventListener('pointerleave', this.onPointerLeave.bind(this));
     }
 
     public dispose() {
-        this.props.domElement.removeEventListener('pointermove', this.onPointerMove);
-        this.props.domElement.removeEventListener('pointerenter', this.onPointerEnter);
-        this.props.domElement.removeEventListener('pointerleave', this.onPointerLeave);
+        this.props.context.domElement.removeEventListener('pointermove', this.onPointerMove);
+        this.props.context.domElement.removeEventListener('pointerenter', this.onPointerEnter);
+        this.props.context.domElement.removeEventListener('pointerleave', this.onPointerLeave);
     }
 
     public update(deltaTime: number) {
@@ -44,13 +45,22 @@ export class CameraControls {
         const heightOffset = 4;
         const margin = 0.2;
 
+        let yawChanged = false;
         if (this.touchInside) {
             if (this.touchPos !== null) {
                 if (this.touchPos.x < margin) {
                     this.yaw += deltaTime * yawSpeed;
+                    yawChanged = true;
                 } else if (this.touchPos.x > 1 - margin) {
                     this.yaw -= deltaTime * yawSpeed;
+                    yawChanged = true;
                 }
+            }
+        }
+
+        if (!yawChanged) {
+            if (this.yawChange !== 0) {
+                this.yaw += deltaTime * yawSpeed * this.yawChange;
             }
         }
 
@@ -59,7 +69,8 @@ export class CameraControls {
 
         this.pitch = MathUtils.clamp(this.pitch, -12, 70);
 
-        const { camera, target } = this.props;
+        const { context, target } = this.props;
+        const { camera } = context;
 
         const yawRotation = new Quaternion().setFromAxisAngle(target.up, this.yaw * MathUtils.DEG2RAD);
         const pitchRotation = new Quaternion().setFromAxisAngle(target.right, this.pitch * MathUtils.DEG2RAD);        
@@ -69,9 +80,9 @@ export class CameraControls {
         camera.position.set(0, 0, 0)
             .addScaledVector(target.up, heightOffset)
             .addScaledVector(newForward, -distFromTarget)
-            .add(target.position);
+            .add(target.root.position);
 
-        const toPlayer = new Vector3().copy(target.position).sub(camera.position).normalize();
+        const toPlayer = new Vector3().copy(target.root.position).sub(camera.position).normalize();
         const lookAt = new Matrix4().lookAt(new Vector3(), toPlayer, target.up);
         camera.quaternion.setFromRotationMatrix(lookAt);
 
@@ -80,6 +91,10 @@ export class CameraControls {
 
     public resetYaw() {
         this.yaw = 0;
+    }
+
+    public changeYaw(direction: number) {
+        this.yawChange = direction;
     }
 
     private onPointerMove(event: PointerEvent) {
@@ -91,8 +106,8 @@ export class CameraControls {
             this.touchPos = new Vector2();
         }
         this.touchPos.set(
-            event.clientX / this.props.domElement.clientWidth, 
-            event.clientY / this.props.domElement.clientHeight
+            event.clientX / this.props.context.domElement.clientWidth, 
+            event.clientY / this.props.context.domElement.clientHeight
         );
         
         if (this.previousTouch === null) {

@@ -20,7 +20,7 @@ const camera = new THREE.PerspectiveCamera(80, width / height, .1, 100 );
 
 const gui = new GUI();
 
-const world = new World(camera, renderer.domElement, gui);
+const world = new World({ camera, domElement: renderer.domElement, gui });
 const clock = new THREE.Clock();
 
 function tick() {
