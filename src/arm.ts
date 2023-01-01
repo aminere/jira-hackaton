@@ -18,7 +18,7 @@ export class Arm extends Object3D {
         join1Mesh.position.z = bone1Length / 2;
         const join2Mesh = new Mesh(new BoxGeometry(.2, .2, bone2Length), new MeshBasicMaterial({ color: 0x00ff00 }));
         join2Mesh.position.z = bone2Length / 2;
-        // end.add(new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0xff0000 })));
+        end.add(new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0xff0000 })));
         joint2.add(end);
         joint2.add(join2Mesh);
         joint1.add(joint2);
