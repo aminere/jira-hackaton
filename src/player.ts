@@ -1,5 +1,5 @@
 
-import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4 } from "three";
+import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils } from "three";
 import { Arm } from "./arm";
 import { IContext } from "./types";
 
@@ -32,10 +32,15 @@ export class Player extends Object3D {
         },
         stepLength: .7,
         stepHeight: .4,
-        armBoneLengths: [.8, 1],
-        armRanges: [new Vector3(0.6, 0, .5), new Vector3(1.5, 0, 1.3)],
+        armBoneLengths: [.8, 1],        
+        armRanges: [new Vector3(0.6, .3, .5), new Vector3(1.5, 0, 1.3)],
         gravity: 50,
         jumpForce: 15,
+        wiggle: {
+            frequency: 2,
+            amplitude: .2,
+            fadeOutSpeed: 6
+        }
     };
 
     private readonly keyStates: Map<string, boolean> = new Map<string, boolean>();
@@ -50,39 +55,40 @@ export class Player extends Object3D {
     private animationProgress = 0;
     private verticalSpeed = 0;
     private isJumping = false;
+    private wiggleFactor = 0;
 
-    private readonly _root = new Object3D();
-    private readonly _body = new Object3D();
+    private readonly _root = new Object3D(); // holds golbal position and orientation of the player
+    private readonly _bodyRoot = new Object3D(); // holds local position of the body (mainly used for jumping and carrying reference arm positions)
+    private readonly _body = new Object3D(); // holds local rotation of the body (mainly used for wiggling while walking)
     private readonly props: IPlayer;
 
     constructor(props: IPlayer) {
         super();
-        this.props = props;
+        this.props = props;        
+        
+        this._root.position.copy(props.position);
+        this.add(this._root);
+        
+        this._root.add(this._bodyRoot);
+
         const geometry = new BoxGeometry(1, 1, 1);
         const material = new MeshBasicMaterial({ color: 0x0000ff });
         const mesh = new Mesh(geometry, material);
-        mesh.scale.z = 2;
-        
+        mesh.scale.z = 2;        
         const head = new SphereGeometry(.5);
         const headMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
         const headMesh = new Mesh(head, headMaterial);
         headMesh.position.z = 1;
-
-        this._root = new Object3D();
-        this._root.position.copy(props.position);
-        this.add(this._root);
-
-        this._body = new Object3D();
-        this._root.add(this._body);
         this._body.add(mesh);
         this._body.add(headMesh);
+        this._bodyRoot.add(this._body);
         
         const [armRange1, armRange2] = Player.config.armRanges;
         this.arms = [
-            this.createArm(new Vector3(armRange1.x, 0, armRange1.z), new Vector3(armRange2.x, 0, armRange2.z)),
-            this.createArm(new Vector3(-armRange1.x, 0, armRange1.z), new Vector3(-armRange2.x, 0, armRange2.z)),
-            this.createArm(new Vector3(armRange1.x, 0, -armRange1.z), new Vector3(armRange2.x, 0, -armRange2.z)),
-            this.createArm(new Vector3(-armRange1.x, 0, -armRange1.z), new Vector3(-armRange2.x, 0, -armRange2.z))
+            this.createArm(new Vector3(armRange1.x, armRange1.y, armRange1.z), new Vector3(armRange2.x, 0, armRange2.z)),
+            this.createArm(new Vector3(-armRange1.x, armRange1.y, armRange1.z), new Vector3(-armRange2.x, 0, armRange2.z)),
+            this.createArm(new Vector3(armRange1.x, armRange1.y, -armRange1.z), new Vector3(armRange2.x, 0, -armRange2.z)),
+            this.createArm(new Vector3(-armRange1.x, armRange1.y, -armRange1.z), new Vector3(-armRange2.x, 0, -armRange2.z))
         ];
 
         props.context.domElement.addEventListener('keydown', this.onKeyDown.bind(this));
@@ -107,7 +113,7 @@ export class Player extends Object3D {
         const referenceEffector = new Object3D();
         // referenceEffector.add(new Mesh(new SphereGeometry(.3), new MeshBasicMaterial({ color: 0x00ff00 })));
         referenceEffector.position.copy(effectorPosition);
-        this._body.add(referenceEffector);
+        this._bodyRoot.add(referenceEffector);
 
         return { 
             arm, 
@@ -192,7 +198,7 @@ export class Player extends Object3D {
 
             // update rotation
             const lookAt = new Matrix4().lookAt(new Vector3(), new Vector3().copy(this.forward).multiplyScalar(-1), this.up);
-            this.root.quaternion.setFromRotationMatrix(lookAt);
+            this.root.quaternion.setFromRotationMatrix(lookAt);            
 
             // walk cycle
             if (!this.isJumping) {
@@ -221,12 +227,17 @@ export class Player extends Object3D {
                 this.updateAnimation(arm2, stepProgress, 1);
                 this.animationProgress = stepProgress;
                 this.idleAnims = 2;
+
+                // wiggle animation
+                const { wiggle } = Player.config;
+                this._body.rotation.z = Math.sin(Math.PI * 2 * this.wiggleFactor) * wiggle.amplitude;
+                this.wiggleFactor += deltaTime * wiggle.frequency;
             }
 
         } else {
             if (this.idleAnims > 0) {
                 const { armAnimationSpeed } = Player.config;
-                let [arm1, arm2] = this.armCouples[this.currentArmCouple];  
+                const [arm1, arm2] = this.armCouples[this.currentArmCouple];  
                 let done = false;
                 this.animationProgress += deltaTime * armAnimationSpeed.ground;
                 if (this.animationProgress > 1) {
@@ -240,16 +251,20 @@ export class Player extends Object3D {
                     if (this.idleAnims > 0) {
                         this.animationProgress = 0;
                         this.currentArmCouple = (this.currentArmCouple + 1) % this.armCouples.length;
-                        let [arm1, arm2] = this.armCouples[this.currentArmCouple];  
+                        const [arm1, arm2] = this.armCouples[this.currentArmCouple];  
                         this.arms[arm1].effector.getWorldPosition(this.arms[arm1].animationSource);
                         this.arms[arm2].effector.getWorldPosition(this.arms[arm2].animationSource);
                     }
                 }
-            }            
+            }
+
+            // exit wiggle animation
+            const { wiggle } = Player.config;
+            this._body.rotation.z = MathUtils.lerp(this._body.rotation.z, 0, deltaTime * wiggle.fadeOutSpeed);
         }
 
         if (this.isJumping) {            
-            this._body.position.y += this.verticalSpeed * deltaTime;
+            this._bodyRoot.position.y += this.verticalSpeed * deltaTime;
             this.verticalSpeed -= Player.config.gravity * deltaTime;
 
             const { armAnimationSpeed } = Player.config;
@@ -257,10 +272,10 @@ export class Player extends Object3D {
             this.animationProgress = Math.min(this.animationProgress, 1);
             this.arms.forEach((_, i) => this.updateAnimation(i, this.animationProgress, 0));
 
-            if (this._body.position.y < 0) {
-                this._body.position.y = 0;
+            if (this._bodyRoot.position.y < 0) {
+                this._bodyRoot.position.y = 0;
                 this.isJumping = false;
-                this.arms.forEach((_, i) => this.updateAnimation(i, 1, 0));
+                this.idleAnims = 3;
             }
         }
 
