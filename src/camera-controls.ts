@@ -10,26 +10,36 @@ interface ICameraControls {
 
 export class CameraControls {
 
-    public get forward() { return this._forward; }
-
     private readonly props: ICameraControls;
-
-    private _forward = new Vector3();
 
     private readonly deltaTouch = new Vector2();
     private touchPos: Vector2 | null = null;
     private previousTouch: Vector2 | null = null;
-    private yawChange = 0;
 
     private yaw = 0;
-    private pitch = 0;    
     private touchInside = false;
+
+    private config = {
+        distFromTarget: 2.3,        
+        heightOffset: 8.3,
+        lookAtOffsetY: 0,
+        lookAtOffsetZ: 4.5,
+        margin: 0.2
+    };
 
     constructor(props: ICameraControls) {        
         this.props = props;
         props.context.domElement.addEventListener('pointermove', this.onPointerMove.bind(this));
         props.context.domElement.addEventListener('pointerenter', this.onPointerEnter.bind(this));
         props.context.domElement.addEventListener('pointerleave', this.onPointerLeave.bind(this));
+        
+        const { gui } = props.context;
+        const folder = gui.addFolder("Camera");
+        folder.add(this.config, 'distFromTarget', 0, 20, .1);
+        folder.add(this.config, 'heightOffset', 0, 20, .1);
+        folder.add(this.config, 'lookAtOffsetY', 0, 20, .1);
+        folder.add(this.config, 'lookAtOffsetZ', 0, 20, .1);
+        folder.open();
     }
 
     public dispose() {
@@ -38,63 +48,58 @@ export class CameraControls {
         this.props.context.domElement.removeEventListener('pointerleave', this.onPointerLeave);
     }
 
-    public update(deltaTime: number) {
-        const yawSpeed = 125;
-        const pitchSpeed = 10;
-        const distFromTarget = 3;
-        const heightOffset = 4;
-        const margin = 0.2;
-
-        let yawChanged = false;
+    public update(deltaTime: number) {           
+        
         if (this.touchInside) {
             if (this.touchPos !== null) {
-                if (this.touchPos.x < margin) {
-                    this.yaw += deltaTime * yawSpeed;
-                    yawChanged = true;
-                } else if (this.touchPos.x > 1 - margin) {
-                    this.yaw -= deltaTime * yawSpeed;
-                    yawChanged = true;
-                }
+                const { margin } = this.config;
+                const yawSpeed = (() => {
+                    if (this.touchPos.x < margin || this.touchPos.x > 1 - margin) {
+                        return 125 * -Math.sign(this.touchPos.x - margin);
+                    } else {
+                        // map [margin, 1 - margin] to [0, 1]
+                        const a = (this.touchPos.x - margin) / (1 - margin * 2);
+                        // map [0, 1] to [-1, 1]
+                        const b = a * 2 - 1;
+                        return -80 * b;
+                    }
+                })();
+                this.yaw += deltaTime * yawSpeed;                
             }
         }
 
-        if (!yawChanged) {
-            if (this.yawChange !== 0) {
-                this.yaw += deltaTime * yawSpeed * this.yawChange;
-            }
-        }
-
-        this.pitch += this.deltaTouch.y * deltaTime * pitchSpeed;
         this.deltaTouch.set(0, 0);
-
-        this.pitch = MathUtils.clamp(this.pitch, -12, 70);
 
         const { context, target } = this.props;
         const { camera } = context;
 
-        const yawRotation = new Quaternion().setFromAxisAngle(target.up, this.yaw * MathUtils.DEG2RAD);
-        const pitchRotation = new Quaternion().setFromAxisAngle(target.right, this.pitch * MathUtils.DEG2RAD);        
-        const rotation = new Quaternion().multiplyQuaternions(yawRotation, pitchRotation);
-        const newForward = new Vector3().copy(target.forward).applyQuaternion(rotation).normalize();
+        const rotation = new Quaternion().setFromAxisAngle(target.up, this.yaw * MathUtils.DEG2RAD);
+        const newForward = target.forward.clone().applyQuaternion(rotation).normalize();
 
-        camera.position.set(0, 0, 0)
+        const { distFromTarget, heightOffset, lookAtOffsetY, lookAtOffsetZ } = this.config;
+        camera.position.copy(target.root.position)
             .addScaledVector(target.up, heightOffset)
-            .addScaledVector(newForward, -distFromTarget)
-            .add(target.root.position);
+            .addScaledVector(newForward, -distFromTarget);
 
-        const toPlayer = new Vector3().copy(target.root.position).sub(camera.position).normalize();
-        const lookAt = new Matrix4().lookAt(new Vector3(), toPlayer, target.up);
-        camera.quaternion.setFromRotationMatrix(lookAt);
+        const lookTarget = new Vector3()
+            .copy(target.root.position)
+            .addScaledVector(target.up, lookAtOffsetY)
+            .addScaledVector(newForward, lookAtOffsetZ)
+            .sub(camera.position)
+            .normalize();
+        const lookAtMatrix = new Matrix4().lookAt(new Vector3(), lookTarget, target.up);
+        camera.quaternion.setFromRotationMatrix(lookAtMatrix);
 
-        this._forward.copy(target.forward).applyQuaternion(yawRotation).normalize();
+        // const toPlayer = new Vector3().copy(target.root.position).sub(camera.position).normalize();
+        // const lookAt = new Matrix4().lookAt(new Vector3(), toPlayer, target.up);
+        // camera.quaternion.setFromRotationMatrix(lookAt);
     }
 
-    public resetYaw() {
-        this.yaw = 0;
-    }
-
-    public changeYaw(direction: number) {
-        this.yawChange = direction;
+    public resetYaw(oldForward: Vector3, newForward: Vector3, up: Vector3) {
+        const dot = MathUtils.clamp(oldForward.dot(newForward), -1, 1);
+        const angle = Math.acos(MathUtils.clamp(dot, -1, 1));
+        const direction = -Math.sign(new Vector3().crossVectors(oldForward, newForward).dot(up));
+        this.yaw += angle * direction * MathUtils.RAD2DEG;
     }
 
     private onPointerMove(event: PointerEvent) {

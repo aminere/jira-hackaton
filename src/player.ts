@@ -1,6 +1,7 @@
 
-import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils } from "three";
+import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, Ray } from "three";
 import { Arm } from "./arm";
+import { Collision } from "./collision";
 import { IContext } from "./types";
 
 interface IArm {
@@ -12,9 +13,7 @@ interface IArm {
 
 interface IPlayer {
     position: Vector3;
-    getCameraForward: () => Vector3;
-    resetCameraYaw: () => void;
-    changeCameraYaw: (direction: number) => void;
+    resetCameraYaw: (oldForward: Vector3, newForward: Vector3, up: Vector3) => void;
     context: IContext;
 }
 
@@ -47,6 +46,8 @@ export class Player extends Object3D {
     private readonly velocity = new Vector3();
     private stepDistance = 0;
 
+    private moveToPoint: Vector3 | null = null;
+
     private arms!: IArm[];
     private armCouples = [[0, 3], [1, 2]]; // couples of arms to animate together
     private currentArmCouple = 0;
@@ -61,6 +62,8 @@ export class Player extends Object3D {
     private readonly _bodyRoot = new Object3D(); // holds local position of the body (mainly used for jumping and carrying reference arm positions)
     private readonly _body = new Object3D(); // holds local rotation of the body (mainly used for wiggling while walking)
     private readonly props: IPlayer;
+
+    private debug: Mesh;
 
     constructor(props: IPlayer) {
         super();
@@ -92,12 +95,18 @@ export class Player extends Object3D {
         ];
 
         props.context.domElement.addEventListener('keydown', this.onKeyDown.bind(this));
-        props.context.domElement.addEventListener('keyup', this.onKeyUp.bind(this)); 
+        props.context.domElement.addEventListener('keyup', this.onKeyUp.bind(this));
+        props.context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
+
+        this.debug = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0xff0000 }));
+        this.debug.position.copy(props.position);
+        this.add(this.debug);
     }
 
     public dispose() {
         this.props.context.domElement.removeEventListener('keydown', this.onKeyDown);
         this.props.context.domElement.removeEventListener('keyup', this.onKeyUp);
+        this.props.context.domElement.removeEventListener('contextmenu', this.onRightClick);
     }
 
     private createArm(position: Vector3, effectorPosition: Vector3): IArm {
@@ -124,81 +133,43 @@ export class Player extends Object3D {
     }
 
     public update(deltaTime: number) {        
-        let motion = false;
-        let forwardMotion = 0;
-        let lateralMotion = 0;
-        if (this.keyStates.get("KeyW")) {
-            forwardMotion = 1;
-            motion = true;
-        } else if (this.keyStates.get("KeyS")) {
-            forwardMotion = -1;
-            motion = true;
-        }
-        if (this.keyStates.get("KeyA")) {
-            lateralMotion = 1;
-            motion = true;
-        } else if (this.keyStates.get("KeyD")) {
-            lateralMotion = -1;
-            motion = true;
-        }
+        const previousPos = this.root.position.clone();        
 
-        if (this.keyStates.get("Space")) {
-            if (!this.isJumping) {
-                this.isJumping = true;
-                this.verticalSpeed = Player.config.jumpForce;
-                this.arms.forEach(arm => arm.effector.getWorldPosition(arm.animationSource));
-                this.animationProgress = 0;
-                this.idleAnims = 0;
-            }
-        }
-
-        this.props.changeCameraYaw(0);
-        const previousPos = this.root.position.clone();
-
-        if (motion) {
+        if (this.moveToPoint) {
             const { speed } = Player.config;
 
-            this.forward.copy(this.props.getCameraForward());
-            this.right.crossVectors(this.up, this.forward);
-            this.props.resetCameraYaw();
-
-            if (forwardMotion !== 0) {
-                this.velocity
-                    .set(0, 0, 0)
-                    .addScaledVector(this.forward, forwardMotion)
-                    .normalize();
-
-                if (lateralMotion !== 0) {
-                    this.props.changeCameraYaw(lateralMotion);
-                }
-            } else {
-                this.velocity
-                    .set(0, 0, 0)
-                    .addScaledVector(this.right, lateralMotion)
-                    .normalize();
-            }
+            this.right.crossVectors(this.up, this.moveToPoint.clone().normalize());
+            const oldForward = this.forward.clone();
+            this.forward.crossVectors(this.right, this.up).normalize();            
+            // recalculate yaw so as camera remains in the same spot!
+            this.props.resetCameraYaw(oldForward, this.forward, this.up);
+            
+            this.velocity.copy(this.forward);
 
             const newUp = new Vector3()
                 .copy(this.root.position)
                 .addScaledVector(this.velocity, deltaTime * speed)
                 .normalize();
-
-            if (forwardMotion !== 0) {
-                const newForward = new Vector3().crossVectors(this.right, newUp).normalize();
-                this.forward.copy(newForward);
-            } else {
-                const newRight = new Vector3().crossVectors(newUp, this.forward).normalize();
-                this.right.copy(newRight);
-            }
-
+            
+            const newForward = new Vector3().crossVectors(this.right, newUp).normalize();
+            this.forward.copy(newForward);
             this.up.copy(newUp);
 
-            // update position            
-            this.root.position.set(0, 0, 0).addScaledVector(newUp, this.props.position.y);
+            // update position
+            const newPosition = new Vector3().addScaledVector(newUp, this.props.position.y);
+            // If we are going to move past the target, stop at the target and end the motion 
+            const toTarget1 = this.moveToPoint.clone().sub(this.root.position).normalize();
+            const toTarget2 = this.moveToPoint.clone().sub(newPosition).normalize();
+            if (toTarget1.dot(toTarget2) < 0) {
+                this.root.position.copy(this.moveToPoint);
+                this.moveToPoint = null;
+            } else {
+                this.root.position.copy(newPosition);
+            }         
 
             // update rotation
-            const lookAt = new Matrix4().lookAt(new Vector3(), new Vector3().copy(this.forward).multiplyScalar(-1), this.up);
-            this.root.quaternion.setFromRotationMatrix(lookAt);            
+            const lookAt = new Matrix4().lookAt(new Vector3(), this.forward.clone().multiplyScalar(-1), this.up);
+            this.root.quaternion.setFromRotationMatrix(lookAt);
 
             // walk cycle
             if (!this.isJumping) {
@@ -301,5 +272,26 @@ export class Player extends Object3D {
 
     private onKeyUp(event: KeyboardEvent) {
         this.keyStates.set(event.code, false);
+    }
+
+    private onRightClick(event: MouseEvent) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        const rayOrigin = new Vector3().setFromMatrixPosition(this.props.context.camera.matrixWorld);
+        const screenRay = new Ray(
+            rayOrigin,
+            new Vector3(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1,
+                0
+            ).unproject(this.props.context.camera).sub(rayOrigin).normalize()
+        );
+
+        const raycast = Collision.rayCastOnSphere(screenRay, new Vector3(), this.props.position.y);
+        if (raycast) {            
+            this.moveToPoint = raycast.intersection1.clone();
+            this.debug.position.copy(this.moveToPoint);
+        }
     }
 }

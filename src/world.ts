@@ -21,14 +21,12 @@ export class World extends Scene {
     constructor(context: IContext) {
         super();
 
-        const radius = 50;
+        const radius = 20;
 
         this.player = new Player({
             context,
             position: new Vector3(0, radius, 0),
-            getCameraForward: () => this.cameraControls.forward,
-            resetCameraYaw: () => this.cameraControls.resetYaw(),
-            changeCameraYaw: (direction: number) => this.cameraControls.changeYaw(direction)          
+            resetCameraYaw: (a: Vector3, b: Vector3, c: Vector3) => this.cameraControls.resetYaw(a, b, c)
         });
         this.add(this.player);
         
