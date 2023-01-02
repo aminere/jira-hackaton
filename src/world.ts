@@ -7,11 +7,12 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { DirectionalLight, MathUtils, Object3D, Scene, Vector3 } from "three";
+import { DirectionalLight, MathUtils, Mesh, MeshPhongMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, Scene, SphereGeometry, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext } from './types';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { SeedTree } from './seed-tree';
 
 export class World extends Scene {
 
@@ -30,11 +31,25 @@ export class World extends Scene {
         });
         this.add(this.player);
         
-        const light = new DirectionalLight(0xffffff, 1);
-        light.target.position.set(0, -1, 0);
-        light.add(light.target);
+        const light = new DirectionalLight(0xffffff, 1);        
+        light.castShadow = true;
+        light.shadow.mapSize.width = 512; // default
+        light.shadow.mapSize.height = 512; // default
+        light.shadow.camera.near = 0.5; // default
+        light.shadow.camera.far = 50; // default
+        const shadowRange = 20;        
+        light.shadow.camera.left = -shadowRange;
+        light.shadow.camera.right = shadowRange;
+        light.shadow.camera.top = shadowRange;
+        light.shadow.camera.bottom = -shadowRange;
+        // light.target.position.set(0, radius, 0);
+        // light.position.set(0, radius + 10, 0);
+        // this.add(light);
+        // this.add(light.target);
+        light.target.position.set(0, 0, 0);
         light.position.set(0, 10, 0);
-        this.player.add(light);
+        this.player.root.add(light);
+        this.player.root.add(light.target);
 
         this.cameraControls = new CameraControls({ context, target: this.player });
         
@@ -42,12 +57,30 @@ export class World extends Scene {
         // const orbit = new OrbitControls(context.camera, context.domElement);
         // orbit.enabled = false;        
 
-        const terrain = new Terrain({ radius }); 
+        const terrain = new Terrain({ radius });
+        terrain.receiveShadow = true;
         this.add(terrain);
 
         this.addSky(this.player, context.gui);
 
-        this.load();        
+        const tree = new SeedTree();
+        tree.position.set(0, radius, 0);
+        tree.castShadow = true;
+        this.add(tree);
+
+        const sphere = new Mesh(new SphereGeometry(0.5), new MeshStandardMaterial({ color: 0xff0000 }));
+        sphere.position.set(0, radius + 4, 0);
+        sphere.castShadow = true;
+        // this.add(sphere);
+
+        const plane = new Mesh(new PlaneGeometry(6, 6), new MeshPhongMaterial({ color: 0xffffff }));
+        plane.position.set(0, radius, 0);
+        plane.rotateX(-Math.PI / 2);
+        plane.receiveShadow = true;
+        plane.traverse(c => c.receiveShadow = true);
+        // this.add(plane);
+
+        this.load();
     }
 
     private addSky(parent: Object3D, gui: GUI) {
@@ -94,32 +127,9 @@ export class World extends Scene {
     }
 
     private async load() {
-
-        await new Promise(resolve => setTimeout(resolve, 1));                 
-
-        // const waterGeometry = new PlaneGeometry(100, 100);
-        // const water = new Water(
-        //     waterGeometry,
-        //     {
-        //         textureWidth: 512,
-        //         textureHeight: 512,
-        //         waterNormals: new TextureLoader().load('assets/waternormals.jpg', function (texture) {
-
-        //             texture.wrapS = texture.wrapT = RepeatWrapping;
-
-        //         }),
-        //         sunDirection: new Vector3(),
-        //         sunColor: 0xffffff,
-        //         waterColor: 0x001e0f,
-        //         distortionScale: 3.7,
-        //         fog: false
-        //     }
-        // );
-        // water.rotation.x = - Math.PI / 2;
-        // water.position.y = .3;
-        // this.add( water );
-        // water.material.uniforms['sunDirection'].value.copy(sun).normalize();
+        await new Promise(resolve => setTimeout(resolve, 1));        
         
+
         this.dispatchEvent({ type: "ready" });
     }
 

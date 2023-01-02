@@ -39,7 +39,7 @@ export class CameraControls {
         folder.add(this.config, 'heightOffset', 0, 20, .1);
         folder.add(this.config, 'lookAtOffsetY', 0, 20, .1);
         folder.add(this.config, 'lookAtOffsetZ', 0, 20, .1);
-        folder.open();
+        // folder.open();
     }
 
     public dispose() {

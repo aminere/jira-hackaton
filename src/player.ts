@@ -1,5 +1,5 @@
 
-import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, Ray } from "three";
+import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, Ray, MeshStandardMaterial } from "three";
 import { Arm } from "./arm";
 import { Collision } from "./collision";
 import { IContext } from "./types";
@@ -63,7 +63,7 @@ export class Player extends Object3D {
     private readonly _body = new Object3D(); // holds local rotation of the body (mainly used for wiggling while walking)
     private readonly props: IPlayer;
 
-    private debug: Mesh;
+    // private debug: Mesh;
 
     constructor(props: IPlayer) {
         super();
@@ -75,16 +75,16 @@ export class Player extends Object3D {
         this._root.add(this._bodyRoot);
 
         const geometry = new BoxGeometry(1, 1, 1);
-        const material = new MeshBasicMaterial({ color: 0x0000ff });
+        const material = new MeshStandardMaterial({ color: 0x0000ff });
         const mesh = new Mesh(geometry, material);
-        mesh.scale.z = 2;        
+        mesh.scale.z = 2;
         const head = new SphereGeometry(.5);
-        const headMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
+        const headMaterial = new MeshStandardMaterial({ color: 0x00ff00 });
         const headMesh = new Mesh(head, headMaterial);
         headMesh.position.z = 1;
         this._body.add(mesh);
-        this._body.add(headMesh);
-        this._bodyRoot.add(this._body);
+        this._body.add(headMesh);        
+        this._bodyRoot.add(this._body);        
         
         const [armRange1, armRange2] = Player.config.armRanges;
         this.arms = [
@@ -96,16 +96,20 @@ export class Player extends Object3D {
 
         props.context.domElement.addEventListener('keydown', this.onKeyDown.bind(this));
         props.context.domElement.addEventListener('keyup', this.onKeyUp.bind(this));
+        props.context.domElement.addEventListener('click', this.onClick.bind(this));
         props.context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
 
-        this.debug = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0xff0000 }));
-        this.debug.position.copy(props.position);
-        this.add(this.debug);
+        // this.debug = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0xff0000 }));
+        // this.debug.position.copy(props.position);
+        // this.add(this.debug);
+
+        this._body.traverse(c => c.castShadow = true);
     }
 
     public dispose() {
         this.props.context.domElement.removeEventListener('keydown', this.onKeyDown);
         this.props.context.domElement.removeEventListener('keyup', this.onKeyUp);
+        this.props.context.domElement.removeEventListener('click', this.onClick);
         this.props.context.domElement.removeEventListener('contextmenu', this.onRightClick);
     }
 
@@ -133,7 +137,10 @@ export class Player extends Object3D {
     }
 
     public update(deltaTime: number) {        
-        const previousPos = this.root.position.clone();        
+
+        if (this.keyStates.get("Space")) {
+            this.jump();
+        }
 
         if (this.moveToPoint) {
             const { speed } = Player.config;
@@ -156,6 +163,7 @@ export class Player extends Object3D {
             this.up.copy(newUp);
 
             // update position
+            const previousPos = this.root.position.clone();
             const newPosition = new Vector3().addScaledVector(newUp, this.props.position.y);
             // If we are going to move past the target, stop at the target and end the motion 
             const toTarget1 = this.moveToPoint.clone().sub(this.root.position).normalize();
@@ -266,6 +274,17 @@ export class Player extends Object3D {
         }
     }
 
+    private jump() {
+        if (this.isJumping) {
+            return;
+        }
+        this.isJumping = true;
+        this.verticalSpeed = Player.config.jumpForce;
+        this.arms.forEach(arm => arm.effector.getWorldPosition(arm.animationSource));
+        this.animationProgress = 0;
+        this.idleAnims = 0;
+    }
+
     private onKeyDown(event: KeyboardEvent) {  
         this.keyStates.set(event.code, true);
     }
@@ -274,7 +293,7 @@ export class Player extends Object3D {
         this.keyStates.set(event.code, false);
     }
 
-    private onRightClick(event: MouseEvent) {
+    private onClick(event: MouseEvent) {
         event.stopPropagation();
         event.preventDefault();
 
@@ -291,7 +310,12 @@ export class Player extends Object3D {
         const raycast = Collision.rayCastOnSphere(screenRay, new Vector3(), this.props.position.y);
         if (raycast) {            
             this.moveToPoint = raycast.intersection1.clone();
-            this.debug.position.copy(this.moveToPoint);
+            // this.debug.position.copy(this.moveToPoint);
         }
+    }
+
+    private onRightClick(event: MouseEvent) {
+        event.preventDefault();
+        this.jump();
     }
 }
