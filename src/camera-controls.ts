@@ -2,6 +2,7 @@
 import { Vector2, Vector3, MathUtils, Quaternion, Matrix4 } from "three";
 import { Player } from "./player";
 import { IContext } from "./types";
+import { Utils } from "./utils";
 
 interface ICameraControls {
     context: IContext;    
@@ -96,9 +97,11 @@ export class CameraControls {
     }
 
     public resetYaw(oldForward: Vector3, newForward: Vector3, up: Vector3) {
-        const dot = MathUtils.clamp(oldForward.dot(newForward), -1, 1);
+        const dot = oldForward.dot(newForward);
         const angle = Math.acos(MathUtils.clamp(dot, -1, 1));
-        const direction = -Math.sign(new Vector3().crossVectors(oldForward, newForward).dot(up));
+        const [newUp] = Utils.pool.vec3;
+        newUp.crossVectors(oldForward, newForward);
+        const direction = -Math.sign(newUp.dot(up));
         this.yaw += angle * direction * MathUtils.RAD2DEG;
     }
 

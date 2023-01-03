@@ -118,7 +118,7 @@ export class Player extends Object3D {
         const effector = new Object3D(); // new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0x0000ff }));
         effector.position.copy(effectorPosition).add(this._root.position);
         this.add(effector); // not added to the root, so it's not affected by player motion
-        effector.add(new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0x0000ff })));
+        // effector.add(new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0x0000ff })));
         
         const [bone1Length, bone2Length] = Player.config.armBoneLengths;
         const arm = new Arm(effector, bone1Length, bone2Length);
@@ -148,9 +148,15 @@ export class Player extends Object3D {
     public grab(seed: ISeed) {
         const [_, rightArm] = this.arms;
         Utils.setParent(seed.object, this);        
-        const duration = .6;
-        this._isGrabbing = true;
-        const clock = new Clock();
+
+        const { armBoneLengths } = Player.config;
+        const [ bone1Length, bone2Length ] = armBoneLengths;
+        const bone1Factor = bone1Length / (bone1Length + bone2Length);
+        const bone2Factor = bone2Length / (bone1Length + bone2Length);
+        const [armPos] = Utils.pool.vec3;
+        const toTarget = rightArm.arm.getWorldPosition(armPos).distanceTo(seed.object.position);
+        const bone1DesiredLength = toTarget * bone1Factor;
+        const bone2DesiredLength = toTarget * bone2Factor;
 
         const getReferenceArmPosition = () => {
             const [referencePos] = Utils.pool.vec3;
@@ -158,13 +164,13 @@ export class Player extends Object3D {
                 .addScaledVector(this.velocity, 3);
         };
 
+        const duration = .6;        
+        const clock = new Clock();
+        this._isGrabbing = true;
         gsap.timeline({
             onComplete: () => {
                 this._isGrabbing = false;
-            },
-            onUpdate: () => {
-                rightArm.arm.setBoneLengths(2, 2);
-            }
+            }            
         })
             .to(
                 rightArm.effector.position,
@@ -173,9 +179,17 @@ export class Player extends Object3D {
                     y: seed.object.position.y,
                     z: seed.object.position.z,
                     duration,
+                    onUpdate: () => {
+                        const t = clock.getElapsedTime() / duration;                        
+                        rightArm.arm.setBoneLengths(
+                            MathUtils.lerp(bone1Length, bone1DesiredLength, t), 
+                            MathUtils.lerp(bone2Length, bone2DesiredLength, t)
+                        );
+                    },
                     onComplete: () => {
                         seed.object.position.copy(Utils.vec3.zero);
-                        rightArm.effector.add(seed.object);                        
+                        rightArm.effector.add(seed.object);
+                        clock.start();
                     }
                 }
             )
@@ -185,7 +199,14 @@ export class Player extends Object3D {
                     x: () => getReferenceArmPosition().x,
                     y: () => getReferenceArmPosition().y,
                     z: () => getReferenceArmPosition().z,
-                    duration
+                    duration,
+                    onUpdate: () => {
+                        const t = clock.getElapsedTime() / duration;
+                        rightArm.arm.setBoneLengths(
+                            MathUtils.lerp(bone1DesiredLength, bone1Length, t), 
+                            MathUtils.lerp(bone2DesiredLength, bone2Length, t)
+                        );
+                    },
                 }
             );
     }
