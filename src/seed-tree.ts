@@ -33,13 +33,18 @@ export class SeedTree extends Object3D {
     public spawnSeed() {        
         const seed = {
             angle: Math.random() * 360,
-            object: new Mesh(new SphereGeometry(.5), new MeshStandardMaterial({ color: 0xff0000 })),
+            object: new Mesh(new SphereGeometry(.5), new MeshStandardMaterial({ color: 0x00ff00 })),
             // TODO from backend
             jiraTaskId: `JIRA-${this.seeds.length + 1}`
         };
         this.updateSeedPosition(seed);
         this.add(seed.object);
         this.seeds.push(seed);
+        seed.object.traverse(o => o.castShadow = true);
+    }
+
+    public removeSeed(seed: ISeed) {
+        this.seeds.splice(this.seeds.indexOf(seed), 1);
     }
 
     public update(deltaTime: number) {
@@ -52,7 +57,7 @@ export class SeedTree extends Object3D {
 
     public rayCast(ray: Ray) {
         for (const seed of this.seeds) {
-            if (Collision.rayCastOnSphere(ray, seed.object.getWorldPosition(new Vector3()), .5)) {
+            if (Collision.rayCastOnSphere(ray, seed.object.getWorldPosition(new Vector3()), 2)) {
                 return seed;
             }        
         }

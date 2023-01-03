@@ -13,6 +13,7 @@ import { GUI } from "dat.gui";
 import { IContext } from './types';
 import { SeedTree } from './seed-tree';
 import { Collision } from './collision';
+import { Utils } from './utils';
 
 export class World extends Scene {
 
@@ -39,11 +40,11 @@ export class World extends Scene {
         
         const light = new DirectionalLight(0xffffff, 1);        
         light.castShadow = true;
-        light.shadow.mapSize.width = 512;
-        light.shadow.mapSize.height = 512;
+        light.shadow.mapSize.width = 1024;
+        light.shadow.mapSize.height = 1024;
         light.shadow.camera.near = 0.5;
-        light.shadow.camera.far = 50;
-        const shadowRange = 20;        
+        light.shadow.camera.far = 30;
+        const shadowRange = 15;        
         light.shadow.camera.left = -shadowRange;
         light.shadow.camera.right = shadowRange;
         light.shadow.camera.top = shadowRange;
@@ -62,7 +63,8 @@ export class World extends Scene {
         this.addSky(this.player, context.gui);
 
         const tree = new SeedTree(context);
-        tree.position.set(0, radius, 0);
+        tree.position.set(0, radius, 0).addScaledVector(this.player.forward, 20);
+        Utils.castOnSphere(tree, radius);
         this.add(tree);
         this.seedTrees.push(tree);
 
@@ -95,9 +97,9 @@ export class World extends Scene {
         for (const seedTree of this.seedTrees) {
             const seed = seedTree.rayCast(screenRay);
             if (seed) {
-                console.log(seed.jiraTaskId);
                 collision = true;
                 this.player.grab(seed);
+                seedTree.removeSeed(seed);
                 break;
             }
         }

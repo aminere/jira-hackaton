@@ -1,8 +1,9 @@
 
-import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, Ray, MeshStandardMaterial } from "three";
+import { Object3D, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, MeshStandardMaterial, MeshBasicMaterial, Clock } from "three";
 import { Arm } from "./arm";
-import { Collision } from "./collision";
 import { IContext, ISeed } from "./types";
+import { Utils } from "./utils";
+import gsap from "gsap";
 
 interface IArm {
     arm: Arm;
@@ -31,8 +32,8 @@ export class Player extends Object3D {
         },
         stepLength: .7,
         stepHeight: .4,
-        armBoneLengths: [.8, 1],        
-        armRanges: [new Vector3(0.6, .3, .5), new Vector3(1.5, 0, 1.3)],
+        armBoneLengths: [.6, 1.4],        
+        armRanges: [new Vector3(0.6, .3, .5), new Vector3(1.5, 0, 1)],
         gravity: 50,
         jumpForce: 15,
         wiggle: {
@@ -57,6 +58,7 @@ export class Player extends Object3D {
     private verticalSpeed = 0;
     private isJumping = false;
     private wiggleFactor = 0;
+    private _isGrabbing = false;
 
     private readonly _root = new Object3D(); // holds golbal position and orientation of the player
     private readonly _bodyRoot = new Object3D(); // holds local position of the body (mainly used for jumping and carrying reference arm positions)
@@ -85,6 +87,7 @@ export class Player extends Object3D {
         this._body.add(mesh);
         this._body.add(headMesh);        
         this._bodyRoot.add(this._body);
+        this._body.position.y = 1;
         
         const [armRange1, armRange2] = Player.config.armRanges;
         this.arms = [
@@ -115,6 +118,7 @@ export class Player extends Object3D {
         const effector = new Object3D(); // new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0x0000ff }));
         effector.position.copy(effectorPosition).add(this._root.position);
         this.add(effector); // not added to the root, so it's not affected by player motion
+        effector.add(new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0x0000ff })));
         
         const [bone1Length, bone2Length] = Player.config.armBoneLengths;
         const arm = new Arm(effector, bone1Length, bone2Length);
@@ -135,11 +139,55 @@ export class Player extends Object3D {
     }
 
     public moveTo(point: Vector3) {
+        if (this._isGrabbing) {
+            return;
+        }
         this.moveToPoint = point;
     }
 
     public grab(seed: ISeed) {
-        
+        const [_, rightArm] = this.arms;
+        Utils.setParent(seed.object, this);        
+        const duration = .6;
+        this._isGrabbing = true;
+        const clock = new Clock();
+
+        const getReferenceArmPosition = () => {
+            const [referencePos] = Utils.pool.vec3;
+            return rightArm.referenceEffector.getWorldPosition(referencePos)
+                .addScaledVector(this.velocity, 3);
+        };
+
+        gsap.timeline({
+            onComplete: () => {
+                this._isGrabbing = false;
+            },
+            onUpdate: () => {
+                rightArm.arm.setBoneLengths(2, 2);
+            }
+        })
+            .to(
+                rightArm.effector.position,
+                {
+                    x: seed.object.position.x,
+                    y: seed.object.position.y,
+                    z: seed.object.position.z,
+                    duration,
+                    onComplete: () => {
+                        seed.object.position.copy(Utils.vec3.zero);
+                        rightArm.effector.add(seed.object);                        
+                    }
+                }
+            )
+            .to(
+                rightArm.effector.position,
+                {
+                    x: () => getReferenceArmPosition().x,
+                    y: () => getReferenceArmPosition().y,
+                    z: () => getReferenceArmPosition().z,
+                    duration
+                }
+            );
     }
 
     public update(deltaTime: number) {        
@@ -177,6 +225,7 @@ export class Player extends Object3D {
             if (toTarget1.dot(toTarget2) < 0) {
                 this.root.position.copy(this.moveToPoint);
                 this.moveToPoint = null;
+                this.velocity.set(0, 0, 0);
             } else {
                 this.root.position.copy(newPosition);
             }         
@@ -267,10 +316,20 @@ export class Player extends Object3D {
         this.arms.forEach(({ arm }) => arm.update());
     }
 
-    private updateAnimation(index: number, progress: number, anticipation: number) {        
+    private updateAnimation(index: number, progress: number, anticipation: number) {   
+
+        if (this._isGrabbing) {
+            // when grabbing, the right arm is animated differently
+            const rightArmIndex = 1;
+            if (index === rightArmIndex) {
+                return;
+            }
+        }
+
         const { animationSource, effector, referenceEffector } = this.arms[index];
-        const targetPos = referenceEffector
-            .getWorldPosition(new Vector3())
+        const [targetPos] = Utils.pool.vec3;
+        referenceEffector
+            .getWorldPosition(targetPos)
             .addScaledVector(this.velocity, anticipation);
         effector.position.lerpVectors(animationSource, targetPos, progress);
 

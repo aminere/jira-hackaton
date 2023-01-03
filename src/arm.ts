@@ -5,6 +5,8 @@ export class Arm extends Object3D {
     private root: Object3D;
     private joints: Object3D[] = [];
     private effector: Object3D;
+    private join1Mesh: Object3D;
+    private join2Mesh: Object3D;
 
     constructor(effector: Object3D, bone1Length: number, bone2Length: number) {
         super();
@@ -12,12 +14,10 @@ export class Arm extends Object3D {
         const joint1 = new Mesh(new SphereGeometry(.1), new MeshBasicMaterial({ color: 0x0000ff }));
         const joint2 = new Mesh(new SphereGeometry(.1), new MeshBasicMaterial({ color: 0x0000ff }));
         const end = new Object3D();
-        end.position.z = bone2Length;
-        joint2.position.z = bone1Length;
-        const join1Mesh = new Mesh(new BoxGeometry(.2, .2, bone1Length), new MeshBasicMaterial({ color: 0x00ff00 }));
-        join1Mesh.position.z = bone1Length / 2;
-        const join2Mesh = new Mesh(new BoxGeometry(.2, .2, bone2Length), new MeshBasicMaterial({ color: 0x00ff00 }));
-        join2Mesh.position.z = bone2Length / 2;
+        const join1Mesh = new Mesh(new BoxGeometry(.2, .2, 1), new MeshBasicMaterial({ color: 0x00ff00 }));
+        this.join1Mesh = join1Mesh;
+        const join2Mesh = new Mesh(new BoxGeometry(.2, .2, 1), new MeshBasicMaterial({ color: 0x00ff00 }));
+        this.join2Mesh = join2Mesh;
         end.add(new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0xff0000 })));
         joint2.add(end);
         joint2.add(join2Mesh);
@@ -27,6 +27,17 @@ export class Arm extends Object3D {
         this.add(this.root);
         this.joints = [joint1, joint2, end];
         this.effector = effector;
+        this.setBoneLengths(bone1Length, bone2Length);
+    }
+
+    public setBoneLengths(bone1Length: number, bone2Length: number) {
+        const [_, joint2, end] = this.joints;
+        end.position.z = bone2Length;
+        joint2.position.z = bone1Length;
+        this.join1Mesh.scale.z = bone1Length;
+        this.join1Mesh.position.z = bone1Length / 2;
+        this.join2Mesh.scale.z = bone2Length;
+        this.join2Mesh.position.z = bone2Length / 2;    
     }
 
     public update() {
