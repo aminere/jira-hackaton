@@ -1,30 +1,76 @@
 
-import { Object3D } from "three";
+import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, Vector3 } from "three";
+import { Collision } from "./collision";
 
-import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+import { Loaders } from "./loaders";
+import { IContext, ISeed } from "./types";
 
 export class SeedTree extends Object3D {
 
-    constructor() {
+    private readonly context: IContext;
+
+    private readonly seeds: ISeed[] = [];
+
+    private static config = {
+        seedAngularSpeed: 60,
+        radius: 4,
+        seedHeight: 3
+    };
+
+    constructor(context: IContext) {
         super();
-
+        this.context = context;
+        
         this.load();
+        this.spawnSeed();
+
+        const folder = context.gui.addFolder("Seed Tree");
+        folder.add(SeedTree.config, 'seedAngularSpeed', 0, 360, 1);
+        folder.add(SeedTree.config, 'radius', 0, 20, .1);
+        folder.add(SeedTree.config, 'seedHeight', 0, 20, .1);        
     }
 
-    public spawnSeed() {
-
+    public spawnSeed() {        
+        const seed = {
+            angle: Math.random() * 360,
+            object: new Mesh(new SphereGeometry(.5), new MeshStandardMaterial({ color: 0xff0000 })),
+            // TODO from backend
+            jiraTaskId: `JIRA-${this.seeds.length + 1}`
+        };
+        this.updateSeedPosition(seed);
+        this.add(seed.object);
+        this.seeds.push(seed);
     }
 
-    public update() {
-        // update seeds        
+    public update(deltaTime: number) {
+        const { seedAngularSpeed } = SeedTree.config;
+        this.seeds.forEach(seed => {
+            seed.angle += deltaTime * seedAngularSpeed;
+            this.updateSeedPosition(seed);
+        });
     }
 
-    private async load() {        
-        const materials = await new MTLLoader().loadAsync("assets/tree_small.mtl");
-        materials.preload();
-        const objLoader = new OBJLoader().setMaterials(materials);
-        const obj = await objLoader.loadAsync("assets/tree_small.obj") as Object3D;
+    public rayCast(ray: Ray) {
+        for (const seed of this.seeds) {
+            if (Collision.rayCastOnSphere(ray, seed.object.getWorldPosition(new Vector3()), .5)) {
+                return seed;
+            }        
+        }
+        return null;
+    }
+
+    private updateSeedPosition(seed: ISeed) {
+        const { radius, seedHeight } = SeedTree.config;
+        const angleRad = seed.angle * MathUtils.DEG2RAD;
+        seed.object.position.set(
+            Math.sin(angleRad) * radius,
+            seedHeight,
+            Math.cos(angleRad) * radius
+        );
+    }
+
+    private async load() {
+        const obj = await Loaders.load("assets/tree_small.obj", "assets/tree_small.mtl");
         obj.scale.setScalar(5);
         obj.traverse(child => child.castShadow = true);
         this.add(obj);

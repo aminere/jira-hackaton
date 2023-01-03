@@ -2,7 +2,7 @@
 import { Object3D, MeshBasicMaterial, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, Ray, MeshStandardMaterial } from "three";
 import { Arm } from "./arm";
 import { Collision } from "./collision";
-import { IContext } from "./types";
+import { IContext, ISeed } from "./types";
 
 interface IArm {
     arm: Arm;
@@ -84,7 +84,7 @@ export class Player extends Object3D {
         headMesh.position.z = 1;
         this._body.add(mesh);
         this._body.add(headMesh);        
-        this._bodyRoot.add(this._body);        
+        this._bodyRoot.add(this._body);
         
         const [armRange1, armRange2] = Player.config.armRanges;
         this.arms = [
@@ -96,7 +96,6 @@ export class Player extends Object3D {
 
         props.context.domElement.addEventListener('keydown', this.onKeyDown.bind(this));
         props.context.domElement.addEventListener('keyup', this.onKeyUp.bind(this));
-        props.context.domElement.addEventListener('click', this.onClick.bind(this));
         props.context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
 
         // this.debug = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0xff0000 }));
@@ -109,7 +108,6 @@ export class Player extends Object3D {
     public dispose() {
         this.props.context.domElement.removeEventListener('keydown', this.onKeyDown);
         this.props.context.domElement.removeEventListener('keyup', this.onKeyUp);
-        this.props.context.domElement.removeEventListener('click', this.onClick);
         this.props.context.domElement.removeEventListener('contextmenu', this.onRightClick);
     }
 
@@ -134,6 +132,14 @@ export class Player extends Object3D {
             referenceEffector,
             animationSource: new Vector3()
         };
+    }
+
+    public moveTo(point: Vector3) {
+        this.moveToPoint = point;
+    }
+
+    public grab(seed: ISeed) {
+        
     }
 
     public update(deltaTime: number) {        
@@ -291,28 +297,7 @@ export class Player extends Object3D {
 
     private onKeyUp(event: KeyboardEvent) {
         this.keyStates.set(event.code, false);
-    }
-
-    private onClick(event: MouseEvent) {
-        event.stopPropagation();
-        event.preventDefault();
-
-        const rayOrigin = new Vector3().setFromMatrixPosition(this.props.context.camera.matrixWorld);
-        const screenRay = new Ray(
-            rayOrigin,
-            new Vector3(
-                (event.clientX / window.innerWidth) * 2 - 1,
-                -(event.clientY / window.innerHeight) * 2 + 1,
-                0
-            ).unproject(this.props.context.camera).sub(rayOrigin).normalize()
-        );
-
-        const raycast = Collision.rayCastOnSphere(screenRay, new Vector3(), this.props.position.y);
-        if (raycast) {            
-            this.moveToPoint = raycast.intersection1.clone();
-            // this.debug.position.copy(this.moveToPoint);
-        }
-    }
+    }    
 
     private onRightClick(event: MouseEvent) {
         event.preventDefault();

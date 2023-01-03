@@ -7,23 +7,29 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { DirectionalLight, MathUtils, Mesh, MeshPhongMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, Scene, SphereGeometry, Vector3 } from "three";
+import { DirectionalLight, MathUtils, Object3D, Ray, Scene, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext } from './types';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { SeedTree } from './seed-tree';
+import { Collision } from './collision';
 
 export class World extends Scene {
 
     private player!: Player;
     private cameraControls!: CameraControls;
+    private seedTrees: SeedTree[] = [];
+    private context: IContext;
+
+    private static config = {
+        radius: 20
+    };
 
     constructor(context: IContext) {
         super();
+        this.context = context;
 
-        const radius = 20;
-
+        const { radius } = World.config;
         this.player = new Player({
             context,
             position: new Vector3(0, radius, 0),
@@ -33,19 +39,15 @@ export class World extends Scene {
         
         const light = new DirectionalLight(0xffffff, 1);        
         light.castShadow = true;
-        light.shadow.mapSize.width = 512; // default
-        light.shadow.mapSize.height = 512; // default
-        light.shadow.camera.near = 0.5; // default
-        light.shadow.camera.far = 50; // default
+        light.shadow.mapSize.width = 512;
+        light.shadow.mapSize.height = 512;
+        light.shadow.camera.near = 0.5;
+        light.shadow.camera.far = 50;
         const shadowRange = 20;        
         light.shadow.camera.left = -shadowRange;
         light.shadow.camera.right = shadowRange;
         light.shadow.camera.top = shadowRange;
         light.shadow.camera.bottom = -shadowRange;
-        // light.target.position.set(0, radius, 0);
-        // light.position.set(0, radius + 10, 0);
-        // this.add(light);
-        // this.add(light.target);
         light.target.position.set(0, 0, 0);
         light.position.set(0, 10, 0);
         this.player.root.add(light);
@@ -53,34 +55,61 @@ export class World extends Scene {
 
         this.cameraControls = new CameraControls({ context, target: this.player });
         
-        // context.camera.position.set(2, 5, -10);
-        // const orbit = new OrbitControls(context.camera, context.domElement);
-        // orbit.enabled = false;        
-
         const terrain = new Terrain({ radius });
         terrain.receiveShadow = true;
         this.add(terrain);
 
         this.addSky(this.player, context.gui);
 
-        const tree = new SeedTree();
+        const tree = new SeedTree(context);
         tree.position.set(0, radius, 0);
-        tree.castShadow = true;
         this.add(tree);
-
-        const sphere = new Mesh(new SphereGeometry(0.5), new MeshStandardMaterial({ color: 0xff0000 }));
-        sphere.position.set(0, radius + 4, 0);
-        sphere.castShadow = true;
-        // this.add(sphere);
-
-        const plane = new Mesh(new PlaneGeometry(6, 6), new MeshPhongMaterial({ color: 0xffffff }));
-        plane.position.set(0, radius, 0);
-        plane.rotateX(-Math.PI / 2);
-        plane.receiveShadow = true;
-        plane.traverse(c => c.receiveShadow = true);
-        // this.add(plane);
+        this.seedTrees.push(tree);
 
         this.load();
+
+        context.domElement.addEventListener('click', this.onClick.bind(this));
+    }
+
+    public dispose() {
+        this.context.domElement.removeEventListener('click', this.onClick.bind(this));
+        this.player.dispose();
+    }
+
+    private onClick(event: MouseEvent) {
+        const rayOrigin = new Vector3().setFromMatrixPosition(this.context.camera.matrixWorld);
+        const screenRay = new Ray(
+            rayOrigin,
+            new Vector3(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1,
+                0
+            ).unproject(this.context.camera).sub(rayOrigin).normalize()
+        );
+
+        const { radius } = World.config;
+
+        let collision = false;
+
+        // check seeds
+        for (const seedTree of this.seedTrees) {
+            const seed = seedTree.rayCast(screenRay);
+            if (seed) {
+                console.log(seed.jiraTaskId);
+                collision = true;
+                this.player.grab(seed);
+                break;
+            }
+        }
+
+        if (collision) {
+            return;
+        }
+
+        const raycast = Collision.rayCastOnSphere(screenRay, new Vector3(), radius);
+        if (raycast) {
+            this.player.moveTo(raycast.intersection1.clone());
+        }
     }
 
     private addSky(parent: Object3D, gui: GUI) {
@@ -123,18 +152,17 @@ export class World extends Scene {
         skyFolder.add(skySettings, 'rayleigh', 0.0, 4, 0.001).onChange(onSkySettingsChanged);
         skyFolder.add(skySettings, 'mieCoefficient', 0.0, 0.1, 0.001).onChange(onSkySettingsChanged);
         skyFolder.add(skySettings, 'mieDirectionalG', 0.0, 1, 0.001).onChange(onSkySettingsChanged);
-        // skyFolder.open();
     }
 
     private async load() {
-        await new Promise(resolve => setTimeout(resolve, 1));        
-        
-
+        await new Promise(resolve => setTimeout(resolve, 1));       
+        // TODO async load
         this.dispatchEvent({ type: "ready" });
     }
 
     public update(deltaTime: number) {
         this.cameraControls.update(deltaTime);
         this.player.update(deltaTime);
+        this.seedTrees.forEach(t => t.update(deltaTime));
     }
 }
