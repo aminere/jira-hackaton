@@ -1,4 +1,5 @@
 import { Camera, Euler, Matrix4, Object3D, Quaternion, Ray, Vector2, Vector3 } from "three";
+import { IContext } from "./types";
 
 export class Utils {
 
@@ -37,14 +38,25 @@ export class Utils {
         parent.add(object);
     }
 
-    public static getScreenRay(x: number, y: number, camera: Camera, ray: Ray) {
+    public static getScreenRay(x: number, y: number, context: IContext, ray: Ray) {
         const [origin, direction] = Utils.pool.vec3;
-        origin.setFromMatrixPosition(camera.matrixWorld);
-        direction.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1, 0)
-            .unproject(camera)
+        origin.setFromMatrixPosition(context.camera.matrixWorld);
+        const { clientWidth, clientHeight } = context.domElement;
+        direction.set((x / clientWidth) * 2 - 1, -(y / clientHeight) * 2 + 1, 0)
+            .unproject(context.camera)
             .sub(origin)
             .normalize();
         return ray.set(origin, direction);
+    }
+
+    public static getScreenPosition(worldPos: Vector3, context: IContext, screenPos: Vector3) {
+        const { clientWidth, clientHeight } = context.domElement;
+        screenPos
+            .copy(worldPos)
+            .project(context.camera);
+        screenPos.x = (screenPos.x + 1) / 2 * clientWidth;
+        screenPos.y = -(screenPos.y - 1) / 2 * clientHeight;
+        return screenPos;
     }
 }
 

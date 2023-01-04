@@ -7,13 +7,14 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { DirectionalLight, MathUtils, Object3D, Ray, Scene, Vector3 } from "three";
+import { DirectionalLight, MathUtils, Object3D, Scene, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext, ISeed } from './types';
 import { SeedTree } from './seed-tree';
 import { Collision } from './collision';
 import { Utils } from './utils';
+import { WaterPit } from './water-pit';
 
 export class World extends Scene {
 
@@ -22,6 +23,8 @@ export class World extends Scene {
     private seedTrees: SeedTree[] = [];
     private context: IContext;
     private seed: ISeed | null = null;
+    private waterPit: WaterPit;
+    private hasWater = false;
 
     private static config = {
         radius: 20
@@ -69,6 +72,14 @@ export class World extends Scene {
         this.add(tree);
         this.seedTrees.push(tree);
 
+        const waterPit = new WaterPit(context);
+        waterPit.position.set(0, radius, 0)
+            .addScaledVector(this.player.forward, 15)
+            .addScaledVector(this.player.right, -10);
+        Utils.castOnSphere(waterPit, radius);
+        this.add(waterPit);
+        this.waterPit = waterPit;
+
         this.load();
 
         context.domElement.addEventListener('click', this.onClick.bind(this));
@@ -84,27 +95,36 @@ export class World extends Scene {
 
     private onClick(event: MouseEvent) {
         const [screenRay] = Utils.pool.ray;
-        Utils.getScreenRay(event.clientX, event.clientY, this.context.camera, screenRay);
+        Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
 
         const { radius } = World.config;
 
-        let collision = false;
+        const isCarryingSomething = Boolean(this.seed) || this.hasWater;
 
-        // check seeds
-        for (const seedTree of this.seedTrees) {
-            const seed = seedTree.rayCast(screenRay);
-            if (seed) {
-                collision = true;
-                this.player.grab(seed);
-                seedTree.removeSeed(seed);
-                this.seed = seed;
-                break;
+        if (!isCarryingSomething) {
+
+            // check seeds
+            for (const seedTree of this.seedTrees) {
+                const seed = seedTree.rayCast(screenRay);
+                if (seed) {
+                    this.player.grabSeed(seed);
+                    seedTree.removeSeed(seed);
+                    this.seed = seed;
+                    break;
+                }
             }
-        }
 
-        if (collision) {
-            return;
-        }
+            if (this.seed) {
+                return;
+            }
+
+            // check water pit
+            if (Collision.rayCastOnSphere(screenRay, this.waterPit.position, 2)) {
+                this.player.grabWater(this.waterPit);
+                this.hasWater = true;
+                return;
+            }
+        } 
 
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
@@ -117,7 +137,7 @@ export class World extends Scene {
         if (this.seed) {
             const { radius } = World.config;
             const [screenRay] = Utils.pool.ray;
-            Utils.getScreenRay(event.clientX, event.clientY, this.context.camera, screenRay);
+            Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
             const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
             if (raycast) {
                 Utils.setParent(this.seed.object, this);

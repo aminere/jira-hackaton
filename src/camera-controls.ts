@@ -56,13 +56,13 @@ export class CameraControls {
                 const { margin } = this.config;
                 const yawSpeed = (() => {
                     if (this.touchPos.x < margin || this.touchPos.x > 1 - margin) {
-                        return 125 * -Math.sign(this.touchPos.x - margin);
+                        return 50 * -Math.sign(this.touchPos.x - margin);
                     } else {
                         // map [margin, 1 - margin] to [0, 1]
                         const a = (this.touchPos.x - margin) / (1 - margin * 2);
                         // map [0, 1] to [-1, 1]
                         const b = a * 2 - 1;
-                        return -80 * b;
+                        return -15 * b;
                     }
                 })();
                 this.yaw += deltaTime * yawSpeed;                

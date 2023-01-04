@@ -1,4 +1,4 @@
-import { BoxGeometry, Euler, MathUtils, Mesh, MeshBasicMaterial, Object3D, Quaternion, SphereGeometry, Vector3 } from "three";
+import { BoxGeometry, Euler, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Quaternion, SphereGeometry, Vector3 } from "three";
 import { Utils } from "./utils";
 
 export class Arm extends Object3D {
@@ -12,14 +12,14 @@ export class Arm extends Object3D {
     constructor(effector: Object3D, bone1Length: number, bone2Length: number) {
         super();
         this.root = new Object3D();
-        const joint1 = new Mesh(new SphereGeometry(.1), new MeshBasicMaterial({ color: 0x0000ff }));
-        const joint2 = new Mesh(new SphereGeometry(.1), new MeshBasicMaterial({ color: 0x0000ff }));
+        const joint1 = new Mesh(new SphereGeometry(.1), new MeshStandardMaterial({ color: 0x0000ff }));
+        const joint2 = new Mesh(new SphereGeometry(.1), new MeshStandardMaterial({ color: 0x0000ff }));
         const end = new Object3D();
-        const join1Mesh = new Mesh(new BoxGeometry(.2, .2, 1), new MeshBasicMaterial({ color: 0x00ff00 }));
+        const join1Mesh = new Mesh(new BoxGeometry(.2, .2, 1), new MeshStandardMaterial({ color: 0x00ff00 }));
         this.join1Mesh = join1Mesh;
-        const join2Mesh = new Mesh(new BoxGeometry(.2, .2, 1), new MeshBasicMaterial({ color: 0x00ff00 }));
+        const join2Mesh = new Mesh(new BoxGeometry(.2, .2, 1), new MeshStandardMaterial({ color: 0x00ff00 }));
         this.join2Mesh = join2Mesh;
-        end.add(new Mesh(new SphereGeometry(.2), new MeshBasicMaterial({ color: 0xff0000 })));
+        end.add(new Mesh(new SphereGeometry(.2), new MeshStandardMaterial({ color: 0xff0000 })));
         joint2.add(end);
         joint2.add(join2Mesh);
         joint1.add(joint2);

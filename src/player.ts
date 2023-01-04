@@ -148,7 +148,7 @@ export class Player extends Object3D {
         this.idleAnims = 0;
     }
 
-    public grab(seed: ISeed) {
+    public grabSeed(seed: ISeed) {
         const [_, rightArm] = this.arms;
         Utils.setParent(seed.object, this);
 
@@ -215,6 +215,10 @@ export class Player extends Object3D {
                     }
                 }
             );
+    }
+
+    public grabWater(waterPit: Object3D) {
+        
     }
 
     public update(deltaTime: number) {        
