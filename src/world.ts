@@ -10,7 +10,7 @@ import { Player } from './player';
 import { DirectionalLight, MathUtils, Object3D, Ray, Scene, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
-import { IContext } from './types';
+import { IContext, ISeed } from './types';
 import { SeedTree } from './seed-tree';
 import { Collision } from './collision';
 import { Utils } from './utils';
@@ -21,6 +21,7 @@ export class World extends Scene {
     private cameraControls!: CameraControls;
     private seedTrees: SeedTree[] = [];
     private context: IContext;
+    private seed: ISeed | null = null;
 
     private static config = {
         radius: 20
@@ -71,23 +72,19 @@ export class World extends Scene {
         this.load();
 
         context.domElement.addEventListener('click', this.onClick.bind(this));
+        context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
+
     }
 
     public dispose() {
         this.context.domElement.removeEventListener('click', this.onClick.bind(this));
+        this.context.domElement.removeEventListener('contextmenu', this.onRightClick);
         this.player.dispose();
     }
 
     private onClick(event: MouseEvent) {
-        const rayOrigin = new Vector3().setFromMatrixPosition(this.context.camera.matrixWorld);
-        const screenRay = new Ray(
-            rayOrigin,
-            new Vector3(
-                (event.clientX / window.innerWidth) * 2 - 1,
-                -(event.clientY / window.innerHeight) * 2 + 1,
-                0
-            ).unproject(this.context.camera).sub(rayOrigin).normalize()
-        );
+        const [screenRay] = Utils.pool.ray;
+        Utils.getScreenRay(event.clientX, event.clientY, this.context.camera, screenRay);
 
         const { radius } = World.config;
 
@@ -100,6 +97,7 @@ export class World extends Scene {
                 collision = true;
                 this.player.grab(seed);
                 seedTree.removeSeed(seed);
+                this.seed = seed;
                 break;
             }
         }
@@ -108,10 +106,27 @@ export class World extends Scene {
             return;
         }
 
-        const raycast = Collision.rayCastOnSphere(screenRay, new Vector3(), radius);
+        const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
             this.player.moveTo(raycast.intersection1.clone());
         }
+    }
+    
+    private onRightClick(event: MouseEvent) {
+        event.preventDefault();
+        if (this.seed) {
+            const { radius } = World.config;
+            const [screenRay] = Utils.pool.ray;
+            Utils.getScreenRay(event.clientX, event.clientY, this.context.camera, screenRay);
+            const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
+            if (raycast) {
+                Utils.setParent(this.seed.object, this);
+                this.seed = null;
+                return;
+            }
+        }
+
+        this.player.jump();
     }
 
     private addSky(parent: Object3D, gui: GUI) {

@@ -58,14 +58,12 @@ export class Player extends Object3D {
     private verticalSpeed = 0;
     private isJumping = false;
     private wiggleFactor = 0;
-    private _isGrabbing = false;
+    private isGrabbing = false;
 
     private readonly _root = new Object3D(); // holds golbal position and orientation of the player
     private readonly _bodyRoot = new Object3D(); // holds local position of the body (mainly used for jumping and carrying reference arm positions)
     private readonly _body = new Object3D(); // holds local rotation of the body (mainly used for wiggling while walking)
     private readonly props: IPlayer;
-
-    // private debug: Mesh;
 
     constructor(props: IPlayer) {
         super();
@@ -98,12 +96,7 @@ export class Player extends Object3D {
         ];
 
         props.context.domElement.addEventListener('keydown', this.onKeyDown.bind(this));
-        props.context.domElement.addEventListener('keyup', this.onKeyUp.bind(this));
-        props.context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
-
-        // this.debug = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0xff0000 }));
-        // this.debug.position.copy(props.position);
-        // this.add(this.debug);
+        props.context.domElement.addEventListener('keyup', this.onKeyUp.bind(this))
 
         this._body.traverse(c => c.castShadow = true);
     }
@@ -111,7 +104,6 @@ export class Player extends Object3D {
     public dispose() {
         this.props.context.domElement.removeEventListener('keydown', this.onKeyDown);
         this.props.context.domElement.removeEventListener('keyup', this.onKeyUp);
-        this.props.context.domElement.removeEventListener('contextmenu', this.onRightClick);
     }
 
     private createArm(position: Vector3, effectorPosition: Vector3): IArm {
@@ -139,15 +131,26 @@ export class Player extends Object3D {
     }
 
     public moveTo(point: Vector3) {
-        if (this._isGrabbing) {
+        if (this.isGrabbing) {
             return;
         }
         this.moveToPoint = point;
     }
 
+    public jump() {
+        if (this.isJumping) {
+            return;
+        }
+        this.isJumping = true;
+        this.verticalSpeed = Player.config.jumpForce;
+        this.arms.forEach(arm => arm.effector.getWorldPosition(arm.animationSource));
+        this.animationProgress = 0;
+        this.idleAnims = 0;
+    }
+
     public grab(seed: ISeed) {
         const [_, rightArm] = this.arms;
-        Utils.setParent(seed.object, this);        
+        Utils.setParent(seed.object, this);
 
         const { armBoneLengths } = Player.config;
         const [ bone1Length, bone2Length ] = armBoneLengths;
@@ -158,18 +161,18 @@ export class Player extends Object3D {
         const bone1DesiredLength = toTarget * bone1Factor;
         const bone2DesiredLength = toTarget * bone2Factor;
 
-        const getReferenceArmPosition = () => {
+        const getReferenceArmPosition = (anticipation: number) => {
             const [referencePos] = Utils.pool.vec3;
             return rightArm.referenceEffector.getWorldPosition(referencePos)
-                .addScaledVector(this.velocity, 3);
+                .addScaledVector(this.velocity, anticipation);
         };
 
         const duration = .6;        
         const clock = new Clock();
-        this._isGrabbing = true;
+        this.isGrabbing = true;
         gsap.timeline({
             onComplete: () => {
-                this._isGrabbing = false;
+                this.isGrabbing = false;
             }            
         })
             .to(
@@ -187,8 +190,7 @@ export class Player extends Object3D {
                         );
                     },
                     onComplete: () => {
-                        seed.object.position.copy(Utils.vec3.zero);
-                        rightArm.effector.add(seed.object);
+                        Utils.setParent(seed.object, rightArm.effector);
                         clock.start();
                     }
                 }
@@ -196,9 +198,9 @@ export class Player extends Object3D {
             .to(
                 rightArm.effector.position,
                 {
-                    x: () => getReferenceArmPosition().x,
-                    y: () => getReferenceArmPosition().y,
-                    z: () => getReferenceArmPosition().z,
+                    x: () => getReferenceArmPosition(3).x,
+                    y: () => getReferenceArmPosition(3).y,
+                    z: () => getReferenceArmPosition(3).z,
                     duration,
                     onUpdate: () => {
                         const t = clock.getElapsedTime() / duration;
@@ -207,6 +209,10 @@ export class Player extends Object3D {
                             MathUtils.lerp(bone2DesiredLength, bone2Length, t)
                         );
                     },
+                    onComplete: () => {
+                        const { x, y, z } = getReferenceArmPosition(1);
+                        gsap.to(rightArm.effector.position, { x, y, z, duration: .2 });
+                    }
                 }
             );
     }
@@ -220,29 +226,39 @@ export class Player extends Object3D {
         if (this.moveToPoint) {
             const { speed } = Player.config;
 
-            this.right.crossVectors(this.up, this.moveToPoint.clone().normalize());
-            const oldForward = this.forward.clone();
+            const [
+                newUp, 
+                newForward, 
+                newPosition, 
+                oldForward, 
+                previousPos, 
+                toTarget1, 
+                toTarget2,
+                invForward
+            ] = Utils.pool.vec3;
+
+            this.right.crossVectors(this.up, this.moveToPoint).normalize();
+            oldForward.copy(this.forward);
             this.forward.crossVectors(this.right, this.up).normalize();            
             // recalculate yaw so as camera remains in the same spot!
             this.props.resetCameraYaw(oldForward, this.forward, this.up);
             
             this.velocity.copy(this.forward);
-
-            const newUp = new Vector3()
-                .copy(this.root.position)
+            
+            newUp.copy(this.root.position)
                 .addScaledVector(this.velocity, deltaTime * speed)
                 .normalize();
             
-            const newForward = new Vector3().crossVectors(this.right, newUp).normalize();
+            newForward.crossVectors(this.right, newUp).normalize();
             this.forward.copy(newForward);
             this.up.copy(newUp);
 
             // update position
-            const previousPos = this.root.position.clone();
-            const newPosition = new Vector3().addScaledVector(newUp, this.props.position.y);
+            previousPos.copy(this.root.position);
+            newPosition.copy(newUp).multiplyScalar(this.props.position.y);
             // If we are going to move past the target, stop at the target and end the motion 
-            const toTarget1 = this.moveToPoint.clone().sub(this.root.position).normalize();
-            const toTarget2 = this.moveToPoint.clone().sub(newPosition).normalize();
+            toTarget1.subVectors(this.moveToPoint, this.root.position).normalize();
+            toTarget2.subVectors(this.moveToPoint, newPosition).normalize();
             if (toTarget1.dot(toTarget2) < 0) {
                 this.root.position.copy(this.moveToPoint);
                 this.moveToPoint = null;
@@ -252,7 +268,9 @@ export class Player extends Object3D {
             }         
 
             // update rotation
-            const lookAt = new Matrix4().lookAt(new Vector3(), this.forward.clone().multiplyScalar(-1), this.up);
+            const [lookAt] = Utils.pool.mat4;
+            invForward.copy(this.forward).multiplyScalar(-1);
+            lookAt.lookAt(Utils.vec3.zero, invForward, this.up);
             this.root.quaternion.setFromRotationMatrix(lookAt);
 
             // walk cycle
@@ -339,7 +357,7 @@ export class Player extends Object3D {
 
     private updateAnimation(index: number, progress: number, anticipation: number) {   
 
-        if (this._isGrabbing) {
+        if (this.isGrabbing) {
             // when grabbing, the right arm is animated differently
             const rightArmIndex = 1;
             if (index === rightArmIndex) {
@@ -355,20 +373,10 @@ export class Player extends Object3D {
         effector.position.lerpVectors(animationSource, targetPos, progress);
 
         if (!this.isJumping) {
+            // make arms elevate above ground while stepping
             const { stepHeight } = Player.config;
             effector.position.addScaledVector(this.up, Math.sin(progress * Math.PI) * stepHeight);
         }
-    }
-
-    private jump() {
-        if (this.isJumping) {
-            return;
-        }
-        this.isJumping = true;
-        this.verticalSpeed = Player.config.jumpForce;
-        this.arms.forEach(arm => arm.effector.getWorldPosition(arm.animationSource));
-        this.animationProgress = 0;
-        this.idleAnims = 0;
     }
 
     private onKeyDown(event: KeyboardEvent) {  
@@ -377,10 +385,6 @@ export class Player extends Object3D {
 
     private onKeyUp(event: KeyboardEvent) {
         this.keyStates.set(event.code, false);
-    }    
-
-    private onRightClick(event: MouseEvent) {
-        event.preventDefault();
-        this.jump();
-    }
+    } 
 }
+

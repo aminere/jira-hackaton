@@ -1,4 +1,5 @@
 import { BoxGeometry, Euler, MathUtils, Mesh, MeshBasicMaterial, Object3D, Quaternion, SphereGeometry, Vector3 } from "three";
+import { Utils } from "./utils";
 
 export class Arm extends Object3D {
 
@@ -41,37 +42,41 @@ export class Arm extends Object3D {
     }
 
     public update() {
+        const [joint1Pos, joint2Pos, endPos, effectorPos] = Utils.pool.vec3;
         const [joint1, joint2, end] = this.joints;
-        const localPos = this.worldToLocal(this.effector.getWorldPosition(new Vector3()));
+        const localPos = this.worldToLocal(this.effector.getWorldPosition(effectorPos));
         const angle = Math.atan2(localPos.x, localPos.z);
-        // const rootLookAt = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), angle);
-        // this.root.quaternion.copy(rootLookAt);
         this.root.rotation.y = angle;
 
-        const localJointPos = this.root.worldToLocal(this.effector.getWorldPosition(new Vector3()));
-        const ab = new Vector3().subVectors(joint2.getWorldPosition(new Vector3()), joint1.getWorldPosition(new Vector3())).length();
-        const bc = new Vector3().subVectors(joint2.getWorldPosition(new Vector3()), end.getWorldPosition(new Vector3())).length();
+        const localJointPos = this.root.worldToLocal(this.effector.getWorldPosition(effectorPos));
+        joint1.getWorldPosition(joint1Pos);
+        joint2.getWorldPosition(joint2Pos);
+        end.getWorldPosition(endPos);
+        const ab = joint1Pos.distanceTo(joint2Pos);
+        const bc = joint2Pos.distanceTo(endPos);
         const at = localJointPos.length();
-        localJointPos.normalize();
+        localJointPos.divideScalar(at); // normalize
         const angle0 = Math.atan2(localJointPos.y, localJointPos.z);
 
-        const aRotation = new Quaternion();
-        const bRotation = new Quaternion();
+        const [aRotation, bRotation] = Utils.pool.quat;
+        aRotation.identity();
+        bRotation.identity();
         const solveDirection = -1;
+        const [euler] = Utils.pool.euler;
         if (at >= ab + bc) {
-            // target too far, keep leg straight
-            aRotation.setFromEuler(new Euler(-angle0, 0, 0));
+            // target too far, keep leg             
+            aRotation.setFromEuler(euler.set(-angle0, 0, 0));
         } else {
             // Use cosine rule to compute joint angles
             // Rotate first joint
             const t = (bc * bc - ab * ab - at * at) / (-2 * ab * at);
             const angle1 = Math.acos(MathUtils.clamp(t, -1, 1));
-            aRotation.setFromEuler(new Euler(-angle0 + angle1 * solveDirection, 0, 0));
+            aRotation.setFromEuler(euler.set(-angle0 + angle1 * solveDirection, 0, 0));
 
             // Rotate second joint
             const t2 = (at * at - ab * ab - bc * bc) / (-2 * ab * bc);
             const angle2 = Math.acos(MathUtils.clamp(t2, -1, 1));
-            bRotation.setFromEuler(new Euler((-Math.PI + angle2) * solveDirection, 0, 0));
+            bRotation.setFromEuler(euler.set((-Math.PI + angle2) * solveDirection, 0, 0));
         }
         joint1.quaternion.copy(aRotation);
         joint2.quaternion.copy(bRotation);

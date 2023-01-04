@@ -22,7 +22,7 @@ export class SeedTree extends Object3D {
         this.context = context;
         
         this.load();
-        this.spawnSeed();
+        [...Array(3)].forEach(() => this.spawnSeed());        
 
         const folder = context.gui.addFolder("Seed Tree");
         folder.add(SeedTree.config, 'seedAngularSpeed', 0, 360, 1);
