@@ -1,5 +1,5 @@
 
-import { Object3D, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, MeshStandardMaterial, MeshBasicMaterial, Clock } from "three";
+import { Object3D, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, MeshStandardMaterial, MeshBasicMaterial, Clock, Color } from "three";
 import { Arm } from "./arm";
 import { IContext, ISeed } from "./types";
 import { Utils } from "./utils";
@@ -59,6 +59,7 @@ export class Player extends Object3D {
     private isJumping = false;
     private wiggleFactor = 0;
     private isGrabbing = false;
+    private waterBucket: Object3D | null = null;
 
     private readonly _root = new Object3D(); // holds golbal position and orientation of the player
     private readonly _bodyRoot = new Object3D(); // holds local position of the body (mainly used for jumping and carrying reference arm positions)
@@ -73,14 +74,11 @@ export class Player extends Object3D {
         this.add(this._root);
         
         this._root.add(this._bodyRoot);
-
-        const geometry = new BoxGeometry(1, 1, 1);
-        const material = new MeshStandardMaterial({ color: 0x0000ff });
-        const mesh = new Mesh(geometry, material);
+        
+        const color = new Color(.3, .3, .3);
+        const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ color }));
         mesh.scale.z = 2;
-        const head = new SphereGeometry(.5);
-        const headMaterial = new MeshStandardMaterial({ color: 0x00ff00 });
-        const headMesh = new Mesh(head, headMaterial);
+        const headMesh = new Mesh(new SphereGeometry(.5), new MeshStandardMaterial({ color }));
         headMesh.position.z = 1;
         this._body.add(mesh);
         this._body.add(headMesh);        
@@ -218,7 +216,9 @@ export class Player extends Object3D {
     }
 
     public grabWater(waterPit: Object3D) {
-        
+        this.waterBucket = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0x0000ff }));
+        this.waterBucket.position.y = 2;
+        this._body.add(this.waterBucket);
     }
 
     public update(deltaTime: number) {        
