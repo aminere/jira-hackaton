@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { World } from './world';
 import { GUI } from 'dat.gui';
 import { Loaders } from './loaders';
+import { UI } from './ui';
 
 const renderer = new THREE.WebGLRenderer({
   canvas: document.getElementById('app') as HTMLCanvasElement,
@@ -21,9 +22,10 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 Loaders.init();
 const camera = new THREE.PerspectiveCamera(80, width / height, .1, 100);
-const gui = new GUI();
-const world = new World({ camera, domElement: renderer.domElement, gui });
+const debugUI = new GUI();
 const clock = new THREE.Clock();
+
+const world = new World({ camera, domElement: renderer.domElement, debugUI });
 
 function tick() {
   const deltaTime = clock.getDelta();  

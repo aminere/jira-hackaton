@@ -15,6 +15,7 @@ import { SeedTree } from './seed-tree';
 import { Collision } from './collision';
 import { Utils } from './utils';
 import { WaterPit } from './water-pit';
+import { UI } from './ui';
 
 export class World extends Scene {
 
@@ -25,6 +26,7 @@ export class World extends Scene {
     private seed: ISeed | null = null;
     private waterPit: WaterPit;
     private hasWater = false;
+    private ui: UI;
 
     private static config = {
         radius: 20
@@ -64,7 +66,7 @@ export class World extends Scene {
         terrain.receiveShadow = true;
         this.add(terrain);
 
-        this.addSky(this.player, context.gui);
+        this.addSky(this.player, context.debugUI);
 
         const tree = new SeedTree(context);
         tree.position.set(0, radius, 0).addScaledVector(this.player.forward, 20);
@@ -83,12 +85,19 @@ export class World extends Scene {
         this.load();
 
         context.domElement.addEventListener('click', this.onClick.bind(this));
+        context.domElement.addEventListener('wheel', this.onWheel.bind(this));
         context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
 
+        const uiCanvas = document.getElementById("ui") as HTMLCanvasElement;
+        uiCanvas.width = context.domElement.clientWidth;
+        uiCanvas.height = context.domElement.clientHeight;
+        this.ui = new UI(uiCanvas, context);
+        this.ui.addMarker(tree, "Seed Tree");
     }
 
     public dispose() {
-        this.context.domElement.removeEventListener('click', this.onClick.bind(this));
+        this.context.domElement.removeEventListener('click', this.onClick);
+        this.context.domElement.removeEventListener('wheel', this.onWheel);
         this.context.domElement.removeEventListener('contextmenu', this.onRightClick);
         this.player.dispose();
     }
@@ -149,6 +158,10 @@ export class World extends Scene {
         this.player.jump();
     }
 
+    private onWheel(event: WheelEvent) {
+        
+    }
+
     private addSky(parent: Object3D, gui: GUI) {
         const sky = new Sky();
         sky.scale.setScalar(10000);
@@ -201,5 +214,6 @@ export class World extends Scene {
         this.cameraControls.update(deltaTime);
         this.player.update(deltaTime);
         this.seedTrees.forEach(t => t.update(deltaTime));
+        this.ui.update(deltaTime);
     }
 }

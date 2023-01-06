@@ -34,7 +34,7 @@ export class CameraControls {
         props.context.domElement.addEventListener('pointerenter', this.onPointerEnter.bind(this));
         props.context.domElement.addEventListener('pointerleave', this.onPointerLeave.bind(this));
         
-        const { gui } = props.context;
+        const { debugUI: gui } = props.context;
         const folder = gui.addFolder("Camera");
         folder.add(this.config, 'distFromTarget', 0, 20, .1);
         folder.add(this.config, 'heightOffset', 0, 20, .1);
