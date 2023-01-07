@@ -1,6 +1,6 @@
 
 import * as THREE from 'three';
-import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, Vector2 } from 'three';
+import { BoxGeometry, CubeTexture, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, Vector2 } from 'three';
 import { PerlinNoise } from './perlin-noise';
 
 interface ITerrainOptions {
@@ -10,34 +10,38 @@ interface ITerrainOptions {
 export class Terrain extends THREE.Mesh {
     public constructor(props: ITerrainOptions) {
 
-        const bpp = 4;
-        const dimension = 256;
-        const size = dimension * dimension;
-        const data = new Uint8Array(size * bpp);
-        const color = new THREE.Color(0xffffff);
-        const r = Math.floor(color.r * 255);
-        const g = Math.floor(color.g * 255);
-        const b = Math.floor(color.b * 255);
-        const stride = dimension * bpp;
-        for (let i = 0; i < dimension; i++) {
-            for (let j = 0; j < dimension; j++) {
-                const index = i * stride + j * bpp;
-                const noise = PerlinNoise.get2DNoise(i, j, 50, 8);
-                data[index + 0] = 255;
-                data[index + 1] = 0;
-                data[index + 2] = 0;
-                data[index + 3] = 255;
-
-                if (j > dimension / 2) {
+        const makeTexture = (face: number) => {
+            console.log(face);
+            const bpp = 4;
+            const dimension = 256;
+            const size = dimension * dimension;
+            const data = new Uint8Array(size * bpp);
+            const stride = dimension * bpp;
+            for (let i = 0; i < dimension; i++) {
+                for (let j = 0; j < dimension; j++) {
+                    const index = i * stride + j * bpp;
                     data[index + 0] = 0;
-                    data[index + 1] = 255;
+                    data[index + 1] = 0;
+                    data[index + 2] = 0;
+                    data[index + 3] = 255;
+                    if (face === 0) {
+                        data[index + 0] = 255;
+                    } else if (face === 1) {
+                        data[index + 1] = 255;
+                    } else if (face === 2) {
+                        data[index + 2] = 255;
+                    }
                 }
             }
-        }
-        const texture = new THREE.DataTexture(data, dimension, dimension, THREE.RGBAFormat);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        texture.needsUpdate = true;
+            const texture = new THREE.DataTexture(data, dimension, dimension, THREE.RGBAFormat);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.needsUpdate = true;
+            return texture;
+        };        
+
+        const cubeMap = new CubeTexture([...Array(6)].map((_, i) => makeTexture(i)));
+        cubeMap.needsUpdate = true;
 
         const material = new THREE.MeshPhongMaterial({ 
             color: 0xffffff, 
@@ -45,23 +49,32 @@ export class Terrain extends THREE.Mesh {
             vertexColors: true            
         });
 
-        material.userData.cells = {
-            value: texture
+        material.userData.cellsMap = {
+            value: cubeMap
         };
         
         material.onBeforeCompile = (shader) => {
-            shader.uniforms.cells = material.userData.cells;
+            shader.uniforms.cellsMap = material.userData.cellsMap; 
+            
+            shader.vertexShader = shader.vertexShader.replace(
+                "#include <normal_pars_vertex>",
+                `#include <normal_pars_vertex>
+                varying vec3 vObjectNormal;
+                `
+            );
 
             shader.vertexShader = shader.vertexShader.replace(
-                "#include <common>",
-                `#include <common>                
+                "#include <beginnormal_vertex>",
+                `#include <beginnormal_vertex>
+                vObjectNormal = objectNormal;
                 `
             );
 
             shader.fragmentShader = shader.fragmentShader.replace(
                 "uniform float opacity;",
                 `uniform float opacity;
-                uniform sampler2D cells;
+                uniform samplerCube cellsMap;
+                varying vec3 vObjectNormal;
                 `
             );
 
@@ -69,9 +82,9 @@ export class Terrain extends THREE.Mesh {
             shader.fragmentShader = shader.fragmentShader.replace(
                 outgoingLight,
                 `
-                ${outgoingLight}
-                vec4 cell = texture2D(cells, vec2(0.504, 0.));
-                outgoingLight *= cell.rgb;
+                ${outgoingLight}                
+                vec4 cellColor = texture(cellsMap, normalize(vObjectNormal));
+                outgoingLight = cellColor.rgb;
                 `
             );
         };

@@ -151,21 +151,29 @@ export class World extends Scene {
                 new Plane(new Vector3(0, 1, 0), World.config.radius),
                 new Plane(new Vector3(-1, 0, 0), World.config.radius),
                 new Plane(new Vector3(0, 0, 1), World.config.radius),
-                new Plane(new Vector3(0, 0, -1), World.config.radius),
+                new Plane(new Vector3(0, 0, -1), World.config.radius)
             ];
 
             const direction = raycast.intersection1.clone().normalize();
-            const boxRadius = Math.sqrt(radius * radius + radius * radius);
+            const boxRadius = Math.sqrt(radius * radius + radius * radius) * 2;
             const planeIntersection = new Vector3();
             for (let i = 0; i < planes.length; i++) {
-                if (planes[i].intersectLine(new Line3(Utils.vec3.zero, direction.clone().multiplyScalar(boxRadius)), planeIntersection)) {
+                if (planes[i].intersectLine(new Line3(Utils.vec3.zero, direction.clone().multiplyScalar(boxRadius)), planeIntersection)) {                    
+                    if (Math.abs(planeIntersection.x) > radius
+                        || Math.abs(planeIntersection.y) > radius
+                        || Math.abs(planeIntersection.z) > radius) {
+                        continue;
+                    }
+
                     const debug2 = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0x0000ff }));
                     debug2.position.copy(planeIntersection);
                     this.add(debug2);
                     console.log(`plane ${i}`);
+                    // get cell coords
+                    
                     break;
                 }
-            }            
+            }
         }
     }
     
