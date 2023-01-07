@@ -19,9 +19,10 @@ export class CameraControls {
 
     private yaw = 0;
     private touchInside = false;
+    private zoom = 0;
 
     private config = {
-        distFromTarget: 2.3,        
+        distFromTarget: 2.3,
         heightOffset: 8.3,
         lookAtOffsetY: 0,
         lookAtOffsetZ: 4.5,
@@ -30,39 +31,44 @@ export class CameraControls {
 
     constructor(props: ICameraControls) {        
         this.props = props;
-        props.context.domElement.addEventListener('pointermove', this.onPointerMove.bind(this));
-        props.context.domElement.addEventListener('pointerenter', this.onPointerEnter.bind(this));
-        props.context.domElement.addEventListener('pointerleave', this.onPointerLeave.bind(this));
         
         const { debugUI: gui } = props.context;
         const folder = gui.addFolder("Camera");
-        folder.add(this.config, 'distFromTarget', 0, 20, .1);
-        folder.add(this.config, 'heightOffset', 0, 20, .1);
-        folder.add(this.config, 'lookAtOffsetY', 0, 20, .1);
-        folder.add(this.config, 'lookAtOffsetZ', 0, 20, .1);
+        folder.add(this.config, 'distFromTarget', 0, 50, .1);
+        folder.add(this.config, 'heightOffset', 0, 50, .1);
+        folder.add(this.config, 'lookAtOffsetY', 0, 50, .1);
+        folder.add(this.config, 'lookAtOffsetZ', 0, 50, .1);
         // folder.open();
+
+        props.context.domElement.addEventListener('pointermove', this.onPointerMove.bind(this));
+        props.context.domElement.addEventListener('pointerenter', this.onPointerEnter.bind(this));
+        props.context.domElement.addEventListener('pointerleave', this.onPointerLeave.bind(this));
+        props.context.domElement.addEventListener('wheel', this.onWheel.bind(this));
     }
 
     public dispose() {
-        this.props.context.domElement.removeEventListener('pointermove', this.onPointerMove);
-        this.props.context.domElement.removeEventListener('pointerenter', this.onPointerEnter);
-        this.props.context.domElement.removeEventListener('pointerleave', this.onPointerLeave);
+        const { context } = this.props;
+        context.domElement.removeEventListener('pointermove', this.onPointerMove);
+        context.domElement.removeEventListener('pointerenter', this.onPointerEnter);
+        context.domElement.removeEventListener('pointerleave', this.onPointerLeave);
+        context.domElement.removeEventListener('wheel', this.onWheel);
     }
 
     public update(deltaTime: number) {           
         
+        const speed = 60;
         if (this.touchInside) {
             if (this.touchPos !== null) {
                 const { margin } = this.config;
                 const yawSpeed = (() => {
                     if (this.touchPos.x < margin || this.touchPos.x > 1 - margin) {
-                        return 50 * -Math.sign(this.touchPos.x - margin);
+                        return speed * -Math.sign(this.touchPos.x - margin);
                     } else {
                         // map [margin, 1 - margin] to [0, 1]
                         const a = (this.touchPos.x - margin) / (1 - margin * 2);
                         // map [0, 1] to [-1, 1]
                         const b = a * 2 - 1;
-                        return -15 * b;
+                        return speed / 3 * -b;
                     }
                 })();
                 this.yaw += deltaTime * yawSpeed;                
@@ -133,5 +139,13 @@ export class CameraControls {
     private onPointerLeave() {
         this.touchInside = false;
     }
-}
 
+    private onWheel(e: WheelEvent) {
+        const delta = Utils.getWheelDelta(e.deltaY, e.deltaMode);
+        this.zoom += delta / 1000;
+        this.zoom = MathUtils.clamp(this.zoom, 0, 1);
+        this.config.distFromTarget = MathUtils.lerp(2.3, 5, this.zoom);
+        this.config.heightOffset = MathUtils.lerp(8.3, 30, this.zoom);
+        this.config.lookAtOffsetZ = MathUtils.lerp(4.5, 0, this.zoom);
+    }
+}
