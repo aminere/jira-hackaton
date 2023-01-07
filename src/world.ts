@@ -7,7 +7,7 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { DirectionalLight, MathUtils, Object3D, Scene, Vector3 } from "three";
+import { DirectionalLight, Line3, MathUtils, Mesh, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext, ISeed } from './types';
@@ -16,6 +16,8 @@ import { Collision } from './collision';
 import { Utils } from './utils';
 import { WaterPit } from './water-pit';
 import { UI } from './ui';
+
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 export class World extends Scene {
 
@@ -60,8 +62,11 @@ export class World extends Scene {
         this.player.root.add(light);
         this.player.root.add(light.target);
 
-        this.cameraControls = new CameraControls({ context, target: this.player });
-        
+        // this.cameraControls = new CameraControls({ context, target: this.player });
+
+        new OrbitControls(context.camera, context.domElement);
+        context.camera.position.set(0, radius + 5, -5);
+
         const terrain = new Terrain({ radius });
         terrain.receiveShadow = true;
         this.add(terrain);
@@ -85,7 +90,6 @@ export class World extends Scene {
         this.load();
 
         context.domElement.addEventListener('click', this.onClick.bind(this));
-        context.domElement.addEventListener('wheel', this.onWheel.bind(this));
         context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
 
         const uiCanvas = document.getElementById("ui") as HTMLCanvasElement;
@@ -97,7 +101,6 @@ export class World extends Scene {
 
     public dispose() {
         this.context.domElement.removeEventListener('click', this.onClick);
-        this.context.domElement.removeEventListener('wheel', this.onWheel);
         this.context.domElement.removeEventListener('contextmenu', this.onRightClick);
         this.player.dispose();
     }
@@ -137,7 +140,19 @@ export class World extends Scene {
 
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
-            this.player.moveTo(raycast.intersection1.clone());
+            // this.player.moveTo(raycast.intersection1.clone());
+            const debug = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0xff0000 }));
+            debug.position.copy(raycast.intersection1);
+            this.add(debug);
+
+            const direction = raycast.intersection1.clone().normalize();
+            const plane = new Plane(new Vector3(0, -1, 0), World.config.radius);
+            const planeIntersection = new Vector3();
+            if (plane.intersectLine(new Line3(new Vector3(), direction.clone().multiplyScalar(World.config.radius * 2)), planeIntersection)) {
+                const debug2 = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0x0000ff }));
+                debug2.position.copy(planeIntersection);
+                this.add(debug2);
+            }
         }
     }
     
@@ -156,10 +171,6 @@ export class World extends Scene {
         }
 
         this.player.jump();
-    }
-
-    private onWheel(event: WheelEvent) {
-        
     }
 
     private addSky(parent: Object3D, gui: GUI) {
@@ -211,7 +222,7 @@ export class World extends Scene {
     }
 
     public update(deltaTime: number) {
-        this.cameraControls.update(deltaTime);
+        // this.cameraControls.update(deltaTime);
         this.player.update(deltaTime);
         this.seedTrees.forEach(t => t.update(deltaTime));
         this.ui.update(deltaTime);

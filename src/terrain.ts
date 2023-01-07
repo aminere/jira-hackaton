@@ -1,5 +1,6 @@
 
 import * as THREE from 'three';
+import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, Vector2 } from 'three';
 import { PerlinNoise } from './perlin-noise';
 
 interface ITerrainOptions {
@@ -90,9 +91,53 @@ export class Terrain extends THREE.Mesh {
         }
         sphere.setAttribute("color", new THREE.BufferAttribute(colors, 3));        
         
-        // sphere.setAttribute("test", new THREE.BufferAttribute(test, 1));
-
+        // sphere.setAttribute("test", new THREE.BufferAttribute(test, 1));        
         super(sphere, material);
+
+        const cellMaterial = new MeshStandardMaterial({ color: 0xff0000, transparent: true, opacity: .5 });        
+        const cells: Object3D[][] = [[]];
+        const cellResolution = 4;
+        const cellSize = props.radius * 2 / cellResolution;
+        const startPos = new Vector2(props.radius, props.radius);
+        const currentPos = startPos.clone();
+        for (let i = 0; i < cellResolution; i++) {
+            for (let j = 0; j < cellResolution; j++) {                
+                const material = cellMaterial.clone();
+                const cell = new Object3D();
+                cell.position.set(currentPos.x, props.radius + -.1 + Math.random() * .2, currentPos.y);
+                cells[0].push(cell);
+                this.add(cell);
+                const box = new Mesh(new BoxGeometry(cellSize, .1, cellSize), material);
+                box.position.set(-cellSize / 2, 0, -cellSize / 2);
+                cell.add(box);
+                cell.add(new Mesh(new SphereGeometry(1), material));
+                currentPos.x -= cellSize;
+            }
+            currentPos.x = startPos.x;
+            currentPos.y -= cellSize;
+        }
+
+        startPos.set(-props.radius, props.radius);
+        currentPos.copy(startPos);
+        cells.push([]);
+        for (let i = 0; i < cellResolution; i++) {
+            for (let j = 0; j < cellResolution; j++) {                
+                const material = cellMaterial.clone();
+                const cell = new Object3D();                                
+                cell.position.set(-props.radius, currentPos.y, currentPos.x);
+                cells[1].push(cell);
+                this.add(cell);
+                const box = new Mesh(new BoxGeometry(cellSize, .1, cellSize), material);                
+                box.rotateZ(Math.PI / 2);
+                box.position.set(0, -cellSize / 2, cellSize / 2);
+                cell.add(box);
+                cell.add(new Mesh(new SphereGeometry(1), material));
+                currentPos.x += cellSize;
+            }
+            currentPos.x = startPos.x;
+            currentPos.y -= cellSize;
+        }        
     }
+    
 }
 
