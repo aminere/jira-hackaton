@@ -145,14 +145,27 @@ export class World extends Scene {
             debug.position.copy(raycast.intersection1);
             this.add(debug);
 
+            const planes = [
+                new Plane(new Vector3(0, -1, 0), World.config.radius),
+                new Plane(new Vector3(1, 0, 0), World.config.radius),
+                new Plane(new Vector3(0, 1, 0), World.config.radius),
+                new Plane(new Vector3(-1, 0, 0), World.config.radius),
+                new Plane(new Vector3(0, 0, 1), World.config.radius),
+                new Plane(new Vector3(0, 0, -1), World.config.radius),
+            ];
+
             const direction = raycast.intersection1.clone().normalize();
-            const plane = new Plane(new Vector3(0, -1, 0), World.config.radius);
+            const boxRadius = Math.sqrt(radius * radius + radius * radius);
             const planeIntersection = new Vector3();
-            if (plane.intersectLine(new Line3(new Vector3(), direction.clone().multiplyScalar(World.config.radius * 2)), planeIntersection)) {
-                const debug2 = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0x0000ff }));
-                debug2.position.copy(planeIntersection);
-                this.add(debug2);
-            }
+            for (let i = 0; i < planes.length; i++) {
+                if (planes[i].intersectLine(new Line3(Utils.vec3.zero, direction.clone().multiplyScalar(boxRadius)), planeIntersection)) {
+                    const debug2 = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0x0000ff }));
+                    debug2.position.copy(planeIntersection);
+                    this.add(debug2);
+                    console.log(`plane ${i}`);
+                    break;
+                }
+            }            
         }
     }
     
