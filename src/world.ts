@@ -62,10 +62,12 @@ export class World extends Scene {
         this.player.root.add(light);
         this.player.root.add(light.target);
 
-        // this.cameraControls = new CameraControls({ context, target: this.player });
-
-        new OrbitControls(context.camera, context.domElement);
-        context.camera.position.set(0, radius + 5, -5);
+        if (false) {
+            this.cameraControls = new CameraControls({ context, target: this.player });
+        } else {
+            context.camera.position.set(0, radius + 10, -5);
+            new OrbitControls(context.camera, context.domElement);
+        }
 
         const terrain = new Terrain({ radius });
         terrain.receiveShadow = true;
@@ -141,7 +143,7 @@ export class World extends Scene {
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
             // this.player.moveTo(raycast.intersection1.clone());
-            const debug = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0xff0000 }));
+            /*const debug = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0xff0000 }));
             debug.position.copy(raycast.intersection1);
             this.add(debug);
 
@@ -157,8 +159,10 @@ export class World extends Scene {
             const direction = raycast.intersection1.clone().normalize();
             const boxRadius = Math.sqrt(radius * radius + radius * radius) * 2;
             const planeIntersection = new Vector3();
+            const line = new Line3();
+            
             for (let i = 0; i < planes.length; i++) {
-                if (planes[i].intersectLine(new Line3(Utils.vec3.zero, direction.clone().multiplyScalar(boxRadius)), planeIntersection)) {                    
+                if (planes[i].intersectLine(line.set(Utils.vec3.zero, direction.clone().multiplyScalar(boxRadius)), planeIntersection)) {                    
                     if (Math.abs(planeIntersection.x) > radius
                         || Math.abs(planeIntersection.y) > radius
                         || Math.abs(planeIntersection.z) > radius) {
@@ -170,10 +174,10 @@ export class World extends Scene {
                     this.add(debug2);
                     console.log(`plane ${i}`);
                     // get cell coords
-                    
+
                     break;
                 }
-            }
+            }*/
         }
     }
     
@@ -243,7 +247,9 @@ export class World extends Scene {
     }
 
     public update(deltaTime: number) {
-        // this.cameraControls.update(deltaTime);
+        if (this.cameraControls) {
+            this.cameraControls.update(deltaTime);
+        }
         this.player.update(deltaTime);
         this.seedTrees.forEach(t => t.update(deltaTime));
         this.ui.update(deltaTime);

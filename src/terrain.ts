@@ -1,7 +1,8 @@
 
 import * as THREE from 'three';
-import { BoxGeometry, CubeTexture, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, Vector2 } from 'three';
+import { BoxGeometry, BufferAttribute, CubeTexture, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, Vector2 } from 'three';
 import { PerlinNoise } from './perlin-noise';
+import { Utils } from './utils';
 
 interface ITerrainOptions {
     radius: number;
@@ -11,7 +12,6 @@ export class Terrain extends THREE.Mesh {
     public constructor(props: ITerrainOptions) {
 
         const makeTexture = (face: number) => {
-            console.log(face);
             const bpp = 4;
             const dimension = 256;
             const size = dimension * dimension;
@@ -109,18 +109,57 @@ export class Terrain extends THREE.Mesh {
 
         const cellMaterial = new MeshStandardMaterial({ color: 0xff0000, transparent: true, opacity: .5 });        
         const cells: Object3D[][] = [[]];
-        const cellResolution = 4;
+        const cellResolution = 16;
         const cellSize = props.radius * 2 / cellResolution;
         const startPos = new Vector2(props.radius, props.radius);
         const currentPos = startPos.clone();
+        const [position, normal] = Utils.pool.vec3;        
+
         for (let i = 0; i < cellResolution; i++) {
             for (let j = 0; j < cellResolution; j++) {                
                 const material = cellMaterial.clone();
                 const cell = new Object3D();
-                cell.position.set(currentPos.x, props.radius + -.1 + Math.random() * .2, currentPos.y);
                 cells[0].push(cell);
                 this.add(cell);
-                const box = new Mesh(new BoxGeometry(cellSize, .1, cellSize), material);
+                const geometry = new BoxGeometry(cellSize, 1, cellSize);
+                const positions = geometry.getAttribute("position");                
+                for (let i = 0; i < positions.count; i++) {                    
+                    const x = positions.getX(i) - cellSize / 2;
+                    const y = positions.getY(i) + 1;
+                    const z = positions.getZ(i) - cellSize / 2;
+                    // project on sphere while preserving height
+                    normal.set(
+                        x + currentPos.x, 
+                        y + props.radius, 
+                        z + currentPos.y)
+                    .normalize();
+                    position.copy(normal)
+                        .multiplyScalar(props.radius)
+                        .addScaledVector(normal, y);
+                    positions.setX(i, position.x);
+                    positions.setY(i, position.y);
+                    positions.setZ(i, position.z);
+                }
+                positions.needsUpdate = true;
+
+                const box = new Mesh(geometry, material);
+                cell.add(box);
+                currentPos.x -= cellSize;
+            }
+            currentPos.x = startPos.x;
+            currentPos.y -= cellSize;
+        }
+
+        /*startPos.set(props.radius, props.radius);
+        currentPos.copy(startPos);
+        for (let i = 0; i < cellResolution; i++) {
+            for (let j = 0; j < cellResolution; j++) {                
+                const material = new MeshStandardMaterial({ color: 0x0000ff, transparent: true, opacity: .5 })
+                const cell = new Object3D();
+                cell.position.set(currentPos.x, props.radius, currentPos.y);
+                cells[0].push(cell);
+                this.add(cell);
+                const box = new Mesh(new BoxGeometry(cellSize, 1, cellSize), material);
                 box.position.set(-cellSize / 2, 0, -cellSize / 2);
                 cell.add(box);
                 cell.add(new Mesh(new SphereGeometry(1), material));
@@ -128,9 +167,9 @@ export class Terrain extends THREE.Mesh {
             }
             currentPos.x = startPos.x;
             currentPos.y -= cellSize;
-        }
+        }*/
 
-        startPos.set(-props.radius, props.radius);
+        /*startPos.set(-props.radius, props.radius);
         currentPos.copy(startPos);
         cells.push([]);
         for (let i = 0; i < cellResolution; i++) {
@@ -149,7 +188,7 @@ export class Terrain extends THREE.Mesh {
             }
             currentPos.x = startPos.x;
             currentPos.y -= cellSize;
-        }        
+        }*/        
     }
     
 }
