@@ -7,7 +7,7 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { DirectionalLight, Line3, MathUtils, Mesh, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, Vector3 } from "three";
+import { Color, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext, ISeed } from './types';
@@ -15,7 +15,7 @@ import { SeedTree } from './seed-tree';
 import { Collision } from './collision';
 import { Utils } from './utils';
 import { WaterPit } from './water-pit';
-import { UI } from './ui';
+import { HUD } from './hud';
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
@@ -28,7 +28,7 @@ export class World extends Scene {
     private seed: ISeed | null = null;
     private waterPit: WaterPit;
     private hasWater = false;
-    private ui: UI;
+    private hud: HUD;
     private terrain: Terrain;    
     private selectedCell: Object3D | null = null;
 
@@ -74,9 +74,9 @@ export class World extends Scene {
         this.player.root.add(light);
         this.player.root.add(light.target);
 
-        const light2 = new DirectionalLight(0xffffff, 1); 
-        light2.position.set(-radius, -radius, -radius);
-        this.add(light2);
+        // const light2 = new DirectionalLight(0xffffff, 1); 
+        // light2.position.set(-radius, -radius, -radius);
+        // this.add(light2);
 
         if (true) {
             this.cameraControls = new CameraControls({ context, target: this.player });
@@ -112,17 +112,22 @@ export class World extends Scene {
         context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
         context.domElement.addEventListener("pointermove", this.onPointerMove.bind(this));
 
-        const uiCanvas = document.getElementById("ui") as HTMLCanvasElement;
-        uiCanvas.width = context.domElement.clientWidth;
-        uiCanvas.height = context.domElement.clientHeight;
-        this.ui = new UI(uiCanvas, context);
-        this.ui.addMarker(tree, "Seed Tree");
+        window.addEventListener("resize", this.onResize.bind(this));
+        const hudCanvas = document.getElementById("hud") as HTMLCanvasElement;
+        hudCanvas.width = context.domElement.clientWidth;
+        hudCanvas.height = context.domElement.clientHeight;
+        this.hud = new HUD(hudCanvas, context);
+        this.hud.addMarker(tree, "Seed Tree");
+
+        const build = document.getElementById("build") as HTMLButtonElement;
+        build.onclick = () => console.log("build");
     }
 
     public dispose() {
         this.context.domElement.removeEventListener('click', this.onClick);
         this.context.domElement.removeEventListener('contextmenu', this.onRightClick);
         this.context.domElement.removeEventListener('pointermove', this.onPointerMove);
+        window.removeEventListener("resize", this.onResize);
         this.player.dispose();
     }
 
@@ -232,6 +237,8 @@ export class World extends Scene {
                     }
                     cell.visible = true;
                     this.selectedCell = cell;
+                    const color = cell.content ? 0xff0000 : 0x00ff00;
+                    (cell.mesh.material as MeshBasicMaterial).color = new Color(color);
                     break;
                 }
             }
@@ -303,12 +310,16 @@ export class World extends Scene {
         this.dispatchEvent({ type: "ready" });
     }
 
+    private onResize() {
+        setTimeout(() => this.hud.setSize(this.context.domElement.clientWidth, this.context.domElement.clientHeight), 10);        
+    }
+
     public update(deltaTime: number) {
         if (this.cameraControls) {
             this.cameraControls.update(deltaTime);
         }
         this.player.update(deltaTime);
         this.seedTrees.forEach(t => t.update(deltaTime));
-        this.ui.update(deltaTime);
+        this.hud.update(deltaTime);
     }
 }

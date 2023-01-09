@@ -1,6 +1,6 @@
 
 import * as THREE from 'three';
-import { BoxGeometry, BufferAttribute, CubeTexture, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, Vector2, Vector3 } from 'three';
+import { BoxGeometry, BufferAttribute, CubeTexture, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, SphereGeometry, Vector2, Vector3 } from 'three';
 import { PerlinNoise } from './perlin-noise';
 import { Utils } from './utils';
 
@@ -9,13 +9,24 @@ interface ITerrainOptions {
     cellResolution: number;
 }
 
+class Cell extends Object3D {
+    public content: Object3D | null = null;
+    public mesh: Mesh;
+
+    constructor(mesh: Mesh) {
+        super();
+        this.add(mesh);
+        this.mesh = mesh;
+    }
+}
+
 export class Terrain extends THREE.Mesh {
 
-    private cells: Object3D[][];
+    private faces: Object3D[];
     private props: ITerrainOptions;
 
     public getCell(face: number, x: number, y: number) {
-        return this.cells[face][y * this.props.cellResolution + x];
+        return this.faces[face].children[y * this.props.cellResolution + x] as Cell;
     }
 
     public constructor(props: ITerrainOptions) {        
@@ -110,7 +121,7 @@ export class Terrain extends THREE.Mesh {
         super(sphere, material);
         this.props = props;
         
-        const cells: Object3D[][] = [
+        const faces: Object3D[] = [
             this.createFace({
                 startPos: new Vector3(props.radius, props.radius, props.radius),
                 faceNormal: new Vector3(0, 1, 0),
@@ -148,7 +159,7 @@ export class Terrain extends THREE.Mesh {
                 scanDirection: [new Vector3(1, 0, 0), new Vector3(0, -1, 0)]
             })
         ];
-        this.cells = cells;
+        this.faces = faces;
     }    
 
     private createFace(settings: {
@@ -158,24 +169,21 @@ export class Terrain extends THREE.Mesh {
         scanDirection: [Vector3, Vector3];
     }) {
         const { startPos, faceNormal, geometryOffset, scanDirection } = settings;
-        const cellMaterial = new MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: .8, side: THREE.DoubleSide });        
+        const cellMaterial = new MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: .8, side: THREE.DoubleSide });        
         const { radius, cellResolution } = this.props;
         const cellSize = radius * 2 / cellResolution;
-        const cellThickness = 1;
+        const cellThickness = .5;
         const currentPos = startPos.clone();
         const [position, normal, absNormal, worldSpacePos] = Utils.pool.vec3;
-        const face: Object3D[] = [];
+        const face = new Object3D();
+        this.add(face);
         absNormal.set(Math.abs(faceNormal.x), Math.abs(faceNormal.y), Math.abs(faceNormal.z));
         const invFaceNormal = new Vector3(1, 1, 1).sub(absNormal);
 
         const [horizScan, vertScan] = scanDirection;        
         for (let i = 0; i < cellResolution; i++) {
-            for (let j = 0; j < cellResolution; j++) {                
-                const material = cellMaterial.clone();
-                const cell = new Object3D();
-                face.push(cell);
-                cell.visible = false;
-                this.add(cell);
+            for (let j = 0; j < cellResolution; j++) {               
+                
                 const geometry = new BoxGeometry(
                     cellSize * invFaceNormal.x + cellThickness * absNormal.x, 
                     cellSize * invFaceNormal.y + cellThickness * absNormal.y,
@@ -203,8 +211,11 @@ export class Terrain extends THREE.Mesh {
                     positions.setY(i, position.y);
                     positions.setZ(i, position.z);
                 }
-                positions.needsUpdate = true;
-                cell.add(new Mesh(geometry, material));
+
+                const material = cellMaterial.clone();
+                const cell = new Cell(new Mesh(geometry, material));
+                face.add(cell);
+                cell.visible = false;
                 currentPos.addScaledVector(horizScan, cellSize);
             }
             currentPos.copy(startPos).addScaledVector(vertScan, cellSize * (i + 1));
