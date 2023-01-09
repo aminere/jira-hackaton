@@ -7,7 +7,7 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { Color, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, Vector3 } from "three";
+import { BoxGeometry, Color, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext, ISeed } from './types';
@@ -18,23 +18,40 @@ import { WaterPit } from './water-pit';
 import { HUD } from './hud';
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import type { Cell } from './cell';
+
+type Action = "flower" | "bush" | "tree" | "water" | "none";
+
+interface IState {
+    seedCount: number;
+    coins: number;
+    action: Action;
+    keys: Map<string, boolean>;
+}
 
 export class World extends Scene {
+
+    private static config = {
+        radius: 20,
+        cellResolution: 10,
+    };
 
     private player!: Player;
     private cameraControls!: CameraControls;
     private seedTrees: SeedTree[] = [];
     private context: IContext;
-    private seed: ISeed | null = null;
-    private waterPit: WaterPit;
-    private hasWater = false;
+    private cursor: string | null = null;
     private hud: HUD;
     private terrain: Terrain;    
-    private selectedCell: Object3D | null = null;
+    private selectedCell: Cell | null = null; 
 
-    private static config = {
-        radius: 20,
-        cellResolution: 10,
+    private flowers: Object3D[] = [];
+
+    private state: IState = {
+        seedCount: 0,
+        coins: 0,
+        action: "none",
+        keys: new Map<string, boolean>()
     };
 
     private static planes = [
@@ -98,13 +115,12 @@ export class World extends Scene {
         this.add(tree);
         this.seedTrees.push(tree);
 
-        const waterPit = new WaterPit(context);
-        waterPit.position.set(0, radius, 0)
-            .addScaledVector(this.player.forward, 15)
-            .addScaledVector(this.player.right, -10);
-        Utils.castOnSphere(waterPit, radius);
-        this.add(waterPit);
-        this.waterPit = waterPit;
+        // const waterPit = new WaterPit(context);
+        // waterPit.position.set(0, radius, 0)
+        //     .addScaledVector(this.player.forward, 15)
+        //     .addScaledVector(this.player.right, -10);
+        // Utils.castOnSphere(waterPit, radius);
+        // this.add(waterPit);
 
         this.load();
 
@@ -113,6 +129,8 @@ export class World extends Scene {
         context.domElement.addEventListener("pointermove", this.onPointerMove.bind(this));
 
         window.addEventListener("resize", this.onResize.bind(this));
+        window.addEventListener('keydown', this.onKeyDown.bind(this));
+        window.addEventListener('keyup', this.onKeyUp.bind(this))
 
         const hudCanvas = document.getElementById("hud") as HTMLCanvasElement;
         hudCanvas.width = context.domElement.clientWidth;
@@ -120,8 +138,32 @@ export class World extends Scene {
         this.hud = new HUD(hudCanvas, context);
         // this.hud.addMarker(tree, "Seed Tree");
 
-        const build = document.getElementById("build") as HTMLButtonElement;
-        build.onclick = () => console.log("build");
+        const buildFlower = document.getElementById("buildFlower") as HTMLButtonElement;
+        buildFlower.onclick = this.buildFlower.bind(this);
+        const buildBush = document.getElementById("buildBush") as HTMLButtonElement;
+        buildBush.onclick = this.buildBush.bind(this);
+        const buildTree = document.getElementById("buildTree") as HTMLButtonElement;
+        buildTree.onclick = this.buildTree.bind(this);
+        const buildWater = document.getElementById("buildWater") as HTMLButtonElement;
+        buildWater.onclick = this.buildWater.bind(this);
+    }
+
+    private buildFlower() {        
+        if (this.state.seedCount < 1) {
+             // TODO: show message
+             console.log("not enough seeds");
+             return;            
+        }
+        this.enterBuildMode("flower");       
+    }
+    private buildBush() {    
+        console.log("todo");
+    }
+    private buildTree() {   
+        console.log("todo");     
+    }
+    private buildWater() {  
+        console.log("todo");      
     }
 
     public dispose() {
@@ -129,7 +171,8 @@ export class World extends Scene {
         this.context.domElement.removeEventListener('contextmenu', this.onRightClick);
         this.context.domElement.removeEventListener('pointermove', this.onPointerMove);
         window.removeEventListener("resize", this.onResize);
-        this.player.dispose();
+        window.removeEventListener('keydown', this.onKeyDown);
+        window.removeEventListener('keyup', this.onKeyUp);
     }
 
     private onClick(event: MouseEvent) {
@@ -138,52 +181,86 @@ export class World extends Scene {
 
         const { radius } = World.config;
 
-        const isCarryingSomething = Boolean(this.seed) || this.hasWater;
-
-        if (!isCarryingSomething) {
-
-            // check seeds
-            for (const seedTree of this.seedTrees) {
-                const seed = seedTree.rayCast(screenRay);
-                if (seed) {
-                    this.player.grabSeed(seed);
-                    seedTree.removeSeed(seed);
-                    this.seed = seed;
-                    break;
-                }
-            }
-
-            if (this.seed) {
+        // check seeds
+        for (const seedTree of this.seedTrees) {
+            const seed = seedTree.rayCast(screenRay);
+            if (seed) {
+                seedTree.removeSeed(seed);
+                this.state.seedCount++;
+                this.updateUI();
                 return;
             }
-
-            // check water pit
-            // if (Collision.rayCastOnSphere(screenRay, this.waterPit.position, 2)) {
-            //     this.player.grabWater(this.waterPit);
-            //     this.hasWater = true;
-            //     return;
-            // }
-        } 
+        }
 
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
-
-            if (this.cameraControls) {
-                this.player.moveTo(raycast.intersection1.clone());
-            }
-
             if (this.selectedCell) {
-                // TODO plant 
+                if (!this.selectedCell.content) {
+                    const [normal] = Utils.pool.vec3;
+                    normal.copy(this.selectedCell.worldPos).normalize();                
+                    const flower = new Object3D();
+                    flower.position.copy(this.selectedCell.worldPos);
+                    Utils.castOnSphere(flower, radius);
+                    const flowerMesh = new Mesh(new BoxGeometry(.5, 2, .5), new MeshBasicMaterial({ color: 0x00ff00 }));
+                    flowerMesh.position.y = 1;
+                    flower.add(flowerMesh);
+                    this.selectedCell.content = flower;
+                    this.add(flower);
+                    this.flowers.push(flower);                    
+                    this.state.seedCount--;
+                    this.updateUI();
+                    this.exitBuildMode();
+                }                
+            } else {
+                if (this.cameraControls) {
+                    this.player.moveTo(raycast.intersection1.clone());
+                }
             }
+        }
+    }    
+
+    private enterBuildMode(action: Action) {
+        this.state.action = action;
+        this.cameraControls.freezeYaw = true;
+    }
+
+    private exitBuildMode() {
+        if (this.selectedCell) {
+            this.selectedCell.visible = false;
+            this.selectedCell = null;
+        }
+        this.cameraControls.freezeYaw = false;        
+        this.state.action = "none";
+    }
+
+    private updateCursor() {
+        if (this.cursor === "grab") {
+            this.cursor = null;
+            this.context.domElement.style.cursor = "default";
         }
     }
 
     private onPointerMove(event: PointerEvent) {
-        if (!this.seed) {
-            return;
-        }
-
         const [screenRay] = Utils.pool.ray;
+        Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
+
+        if (this.state.action === "none") {
+            // check seeds
+            for (const seedTree of this.seedTrees) {
+                const seed = seedTree.rayCast(screenRay);
+                if (seed) {
+                    if (this.cursor !== "grab") {
+                        this.cursor = "grab";
+                        this.context.domElement.style.cursor = this.cursor;
+                    }
+                    return;
+                }
+            }
+            this.updateCursor();
+            return;
+        }        
+
+        this.updateCursor();
         Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
         const { radius, cellResolution } = World.config;
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
@@ -239,27 +316,19 @@ export class World extends Scene {
                     cell.visible = true;
                     this.selectedCell = cell;
                     const color = cell.content ? 0xff0000 : 0x00ff00;
-                    // (cell.mesh.material as MeshBasicMaterial).color = new Color(color);
+                    (cell.mesh.material as MeshBasicMaterial).color = new Color(color);
                     break;
                 }
             }
         }
     }
     
+    private updateUI() {
+        (document.getElementById("seedCount") as HTMLElement).innerText = `x ${this.state.seedCount}`;
+    }
+
     private onRightClick(event: MouseEvent) {
         event.preventDefault();
-        if (this.seed) {
-            const { radius } = World.config;
-            const [screenRay] = Utils.pool.ray;
-            Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
-            const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
-            if (raycast) {
-                Utils.setParent(this.seed.object, this);
-                this.seed = null;
-                return;
-            }
-        }
-
         this.player.jump();
     }
 
@@ -319,8 +388,25 @@ export class World extends Scene {
         if (this.cameraControls) {
             this.cameraControls.update(deltaTime);
         }
+
+        if (this.state.keys.get("Space")) {
+            this.player.jump();
+        }
+
         this.player.update(deltaTime);
         this.seedTrees.forEach(t => t.update(deltaTime));
         this.hud.update(deltaTime);
     }
+
+    private onKeyDown(event: KeyboardEvent) {  
+        this.state.keys.set(event.code, true);
+    }
+
+    private onKeyUp(event: KeyboardEvent) {
+        this.state.keys.set(event.code, false);
+        
+        if (event.code === "Escape") {
+            this.exitBuildMode();
+        }
+    } 
 }

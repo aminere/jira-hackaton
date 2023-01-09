@@ -11,6 +11,8 @@ interface ICameraControls {
 
 export class CameraControls {
 
+    public freezeYaw = false;
+
     private readonly props: ICameraControls;
 
     private readonly deltaTouch = new Vector2();
@@ -71,7 +73,9 @@ export class CameraControls {
                         return speed / 3 * -b;
                     }
                 })();
-                this.yaw += deltaTime * yawSpeed;                
+                if (!this.freezeYaw) {
+                    this.yaw += deltaTime * yawSpeed;
+                }
             }
         }
 

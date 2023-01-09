@@ -12,8 +12,8 @@ export class SeedTree extends Object3D {
     private readonly seeds: ISeed[] = [];
 
     private static config = {
-        seedAngularSpeed: 60,
-        radius: 4,
+        seedAngularSpeed: 30,
+        radius: 5,
         seedHeight: 3
     };
 
@@ -45,6 +45,7 @@ export class SeedTree extends Object3D {
 
     public removeSeed(seed: ISeed) {
         this.seeds.splice(this.seeds.indexOf(seed), 1);
+        seed.object.removeFromParent();
     }
 
     public update(deltaTime: number) {

@@ -43,7 +43,6 @@ export class Player extends Object3D {
         }
     };
 
-    private readonly keyStates: Map<string, boolean> = new Map<string, boolean>();
     private readonly velocity = new Vector3();
     private stepDistance = 0;
 
@@ -93,15 +92,7 @@ export class Player extends Object3D {
             this.createArm(new Vector3(-armRange1.x, armRange1.y, -armRange1.z), new Vector3(-armRange2.x, 0, -armRange2.z))
         ];
 
-        window.addEventListener('keydown', this.onKeyDown.bind(this));
-        window.addEventListener('keyup', this.onKeyUp.bind(this))
-
         this._body.traverse(c => c.castShadow = true);
-    }
-
-    public dispose() {
-        window.removeEventListener('keydown', this.onKeyDown);
-        window.removeEventListener('keyup', this.onKeyUp);
     }
 
     private createArm(position: Vector3, effectorPosition: Vector3): IArm {
@@ -222,10 +213,6 @@ export class Player extends Object3D {
     }
 
     public update(deltaTime: number) {        
-
-        if (this.keyStates.get("Space")) {
-            this.jump();
-        }
 
         if (this.moveToPoint) {
             const { speed } = Player.config;
@@ -381,14 +368,6 @@ export class Player extends Object3D {
             const { stepHeight } = Player.config;
             effector.position.addScaledVector(this.up, Math.sin(progress * Math.PI) * stepHeight);
         }
-    }
-
-    private onKeyDown(event: KeyboardEvent) {  
-        this.keyStates.set(event.code, true);
-    }
-
-    private onKeyUp(event: KeyboardEvent) {
-        this.keyStates.set(event.code, false);
-    } 
+    }    
 }
 

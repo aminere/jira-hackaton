@@ -26,9 +26,8 @@ button {
     border: 1px solid black;
     border-radius: 12px;
     transition: background-color 0.2s;
-    padding: 3vmin;
-    width: 8vmax;
-    height: 8vmax;
+    width: 7vmax;
+    height: 7vmax;
 }
 
 button:hover {
