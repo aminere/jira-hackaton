@@ -29,16 +29,18 @@ export class World extends Scene {
     private waterPit: WaterPit;
     private hasWater = false;
     private ui: UI;
+    private terrain: Terrain;
 
     private static config = {
-        radius: 20
+        radius: 20,
+        cellResolution: 16,
     };
 
     constructor(context: IContext) {
         super();
         this.context = context;
 
-        const { radius } = World.config;
+        const { radius, cellResolution } = World.config;
         this.player = new Player({
             context,
             position: new Vector3(0, radius, 0),
@@ -62,16 +64,21 @@ export class World extends Scene {
         this.player.root.add(light);
         this.player.root.add(light.target);
 
-        if (false) {
+        // const light2 = new DirectionalLight(0xffffff, 1); 
+        // light2.position.set(-radius, -radius, -radius);
+        // this.add(light2);
+
+        if (true) {
             this.cameraControls = new CameraControls({ context, target: this.player });
         } else {
             context.camera.position.set(0, radius + 10, -5);
             new OrbitControls(context.camera, context.domElement);
         }
 
-        const terrain = new Terrain({ radius });
+        const terrain = new Terrain({ radius, cellResolution });
         terrain.receiveShadow = true;
         this.add(terrain);
+        this.terrain = terrain;
 
         this.addSky(this.player, context.debugUI);
 
@@ -111,7 +118,7 @@ export class World extends Scene {
         const [screenRay] = Utils.pool.ray;
         Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
 
-        const { radius } = World.config;
+        const { radius, cellResolution } = World.config;
 
         const isCarryingSomething = Boolean(this.seed) || this.hasWater;
 
@@ -142,10 +149,14 @@ export class World extends Scene {
 
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
-            // this.player.moveTo(raycast.intersection1.clone());
-            /*const debug = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0xff0000 }));
-            debug.position.copy(raycast.intersection1);
-            this.add(debug);
+
+            if (this.cameraControls) {
+                this.player.moveTo(raycast.intersection1.clone());
+            }
+
+            // const debug = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0xff0000 }));
+            // debug.position.copy(raycast.intersection1);
+            // this.add(debug);
 
             const planes = [
                 new Plane(new Vector3(0, -1, 0), World.config.radius),
@@ -161,6 +172,7 @@ export class World extends Scene {
             const planeIntersection = new Vector3();
             const line = new Line3();
             
+            const cellSize = radius * 2 / cellResolution;
             for (let i = 0; i < planes.length; i++) {
                 if (planes[i].intersectLine(line.set(Utils.vec3.zero, direction.clone().multiplyScalar(boxRadius)), planeIntersection)) {                    
                     if (Math.abs(planeIntersection.x) > radius
@@ -168,16 +180,22 @@ export class World extends Scene {
                         || Math.abs(planeIntersection.z) > radius) {
                         continue;
                     }
+                    // const debug2 = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0x0000ff }));
+                    // debug2.position.copy(planeIntersection);
+                    // this.add(debug2);
 
-                    const debug2 = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0x0000ff }));
-                    debug2.position.copy(planeIntersection);
-                    this.add(debug2);
-                    console.log(`plane ${i}`);
                     // get cell coords
+                    const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
+                    const y = -planeIntersection.z + radius; // convert from [radius, -radius] to [0, radius * 2]
+                    const cellX = Math.floor(x / cellSize);
+                    const cellY = Math.floor(y / cellSize);
 
+                    // const cell = this.terrain.getCell(i, cellX, cellY);
+                    // console.log(cell.children.length);
+                    console.log(`plane ${i}, cell ${cellX}, ${cellY}`);
                     break;
                 }
-            }*/
+            }
         }
     }
     
