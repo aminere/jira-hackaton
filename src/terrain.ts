@@ -149,105 +149,6 @@ export class Terrain extends THREE.Mesh {
             })
         ];
         this.cells = cells;
-
-        const { radius, cellResolution } = this.props;
-        const cellSize = radius * 2 / cellResolution;
-        const cellMaterial = new MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: .8, side: THREE.DoubleSide });
-        const startPos = new Vector2(radius, radius);
-        const currentPos = startPos.clone();
-        const [position, normal] = Utils.pool.vec3;
-        
-        /*for (let i = 0; i < cellResolution; i++) {
-            for (let j = 0; j < cellResolution; j++) {                
-                const material = cellMaterial.clone();
-                const cell = new Object3D();
-                // cells[0].push(cell);
-                this.add(cell);
-                const geometry = new BoxGeometry(cellSize, 1, cellSize);
-                const positions = geometry.getAttribute("position");                
-                for (let i = 0; i < positions.count; i++) {                    
-                    const x = positions.getX(i) - cellSize / 2;
-                    const y = positions.getY(i) + .5;
-                    const z = positions.getZ(i) - cellSize / 2;            
-
-                    // project on sphere while preserving height
-                    normal.set(
-                        x + currentPos.x, 
-                        y + props.radius, 
-                        z + currentPos.y)
-                    .normalize();
-                    position.copy(normal)
-                        .multiplyScalar(props.radius)
-                        .addScaledVector(normal, y);
-                    positions.setX(i, position.x);
-                    positions.setY(i, position.y);
-                    positions.setZ(i, position.z);
-                }
-                positions.needsUpdate = true;
-
-                const box = new Mesh(geometry, material);
-                cell.add(box);
-                currentPos.x -= cellSize;
-            }
-            currentPos.x = startPos.x;
-            currentPos.y -= cellSize;
-        }*/
-
-        /*startPos.set(props.radius, props.radius);
-        currentPos.copy(startPos);
-        for (let i = 0; i < cellResolution; i++) {
-            for (let j = 0; j < cellResolution; j++) {                
-                const material = new MeshStandardMaterial({ color: 0x0000ff, transparent: true, opacity: .5 })
-                const cell = new Object3D();
-                cell.position.set(currentPos.x, props.radius, currentPos.y);
-                cells[0].push(cell);
-                this.add(cell);
-                const box = new Mesh(new BoxGeometry(cellSize, 1, cellSize), material);
-                box.position.set(-cellSize / 2, 0, -cellSize / 2);
-                cell.add(box);
-                // cell.add(new Mesh(new SphereGeometry(1), material));
-                currentPos.x -= cellSize;
-            }
-            currentPos.x = startPos.x;
-            currentPos.y -= cellSize;
-        }*/
-
-        /*startPos.set(-props.radius, props.radius);
-        currentPos.copy(startPos);
-        for (let i = 0; i < cellResolution; i++) {
-            for (let j = 0; j < cellResolution; j++) {                
-                const material = cellMaterial.clone();
-                const cell = new Object3D();                                
-                this.add(cell);
-                const geometry = new BoxGeometry(1, cellSize, cellSize);
-                const positions = geometry.getAttribute("position");
-                for (let i = 0; i < positions.count; i++) {    
-                    const x = positions.getX(i) - .5;                
-                    const y = positions.getY(i) - cellSize / 2;                    
-                    const z = positions.getZ(i) + cellSize / 2;
-
-                    // project on sphere while preserving height
-                    normal.set(
-                        x - props.radius,
-                        y + currentPos.y,                         
-                        z + currentPos.x)
-                    .normalize();
-                    position.copy(normal)
-                        .multiplyScalar(props.radius)
-                        .addScaledVector(normal, -x);
-                    positions.setX(i, position.x);
-                    positions.setY(i, position.y);
-                    positions.setZ(i, position.z);
-                }
-                positions.needsUpdate = true;
-
-                const box = new Mesh(geometry, material);                
-                cell.add(box);
-                currentPos.x += cellSize;
-            }
-            currentPos.x = startPos.x;
-            currentPos.y -= cellSize;
-        }*/
     }    
 
     private createFace(settings: {
@@ -261,42 +162,24 @@ export class Terrain extends THREE.Mesh {
         const { radius, cellResolution } = this.props;
         const cellSize = radius * 2 / cellResolution;
         const cellThickness = 1;
-        // const startPos = new Vector2(radius, radius);
         const currentPos = startPos.clone();
-        const [position, normal, worldSpacePos] = Utils.pool.vec3;
+        const [position, normal, absNormal, worldSpacePos] = Utils.pool.vec3;
         const face: Object3D[] = [];
-        const invFaceNormal = new Vector3(
-            1 - Math.abs(faceNormal.x),
-            1 - Math.abs(faceNormal.y),
-            1 - Math.abs(faceNormal.z)
-        );
-        
-        console.log({ faceNormal, invFaceNormal });
+        absNormal.set(Math.abs(faceNormal.x), Math.abs(faceNormal.y), Math.abs(faceNormal.z));
+        const invFaceNormal = new Vector3(1, 1, 1).sub(absNormal);
 
-        const [horizScan, vertScan] = scanDirection;
-        console.log("geoemtry dimensions");
-        console.log(
-            cellSize * invFaceNormal.x + cellThickness * Math.abs(faceNormal.x), 
-            cellSize * invFaceNormal.y + cellThickness * Math.abs(faceNormal.y),
-            cellSize * invFaceNormal.z + cellThickness * Math.abs(faceNormal.z) 
-        );
-        console.log("geometry offsets");
-        console.log(
-            geometryOffset.x * invFaceNormal.x * cellSize / 2 + faceNormal.x * cellThickness / 2,
-            geometryOffset.y * invFaceNormal.y * cellSize / 2 + faceNormal.y * cellThickness / 2,
-            geometryOffset.z * invFaceNormal.z * cellSize / 2 + faceNormal.z * cellThickness / 2
-        );
+        const [horizScan, vertScan] = scanDirection;        
         for (let i = 0; i < cellResolution; i++) {
             for (let j = 0; j < cellResolution; j++) {                
                 const material = cellMaterial.clone();
                 const cell = new Object3D();
                 face.push(cell);
-                // cell.visible = false;
+                cell.visible = false;
                 this.add(cell);
                 const geometry = new BoxGeometry(
-                    cellSize * invFaceNormal.x + cellThickness * Math.abs(faceNormal.x), 
-                    cellSize * invFaceNormal.y + cellThickness * Math.abs(faceNormal.y),
-                    cellSize * invFaceNormal.z + cellThickness * Math.abs(faceNormal.z) 
+                    cellSize * invFaceNormal.x + cellThickness * absNormal.x, 
+                    cellSize * invFaceNormal.y + cellThickness * absNormal.y,
+                    cellSize * invFaceNormal.z + cellThickness * absNormal.z
                 );
                 const positions = geometry.getAttribute("position");
                 for (let i = 0; i < positions.count; i++) {
@@ -315,7 +198,7 @@ export class Terrain extends THREE.Mesh {
                     position.copy(normal)
                         .multiplyScalar(radius)
                         .addScaledVector(normal, normalFactor);
-                        // .addScaledVector(normal, y);
+                        
                     positions.setX(i, position.x);
                     positions.setY(i, position.y);
                     positions.setZ(i, position.z);

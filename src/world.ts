@@ -29,12 +29,22 @@ export class World extends Scene {
     private waterPit: WaterPit;
     private hasWater = false;
     private ui: UI;
-    private terrain: Terrain;
+    private terrain: Terrain;    
+    private selectedCell: Object3D | null = null;
 
     private static config = {
         radius: 20,
-        cellResolution: 16,
+        cellResolution: 10,
     };
+
+    private static planes = [
+        new Plane(new Vector3(0, -1, 0), World.config.radius),
+        new Plane(new Vector3(1, 0, 0), World.config.radius),
+        new Plane(new Vector3(0, 1, 0), World.config.radius),
+        new Plane(new Vector3(-1, 0, 0), World.config.radius),
+        new Plane(new Vector3(0, 0, 1), World.config.radius),
+        new Plane(new Vector3(0, 0, -1), World.config.radius)
+    ];
 
     constructor(context: IContext) {
         super();
@@ -64,9 +74,9 @@ export class World extends Scene {
         this.player.root.add(light);
         this.player.root.add(light.target);
 
-        // const light2 = new DirectionalLight(0xffffff, 1); 
-        // light2.position.set(-radius, -radius, -radius);
-        // this.add(light2);
+        const light2 = new DirectionalLight(0xffffff, 1); 
+        light2.position.set(-radius, -radius, -radius);
+        this.add(light2);
 
         if (true) {
             this.cameraControls = new CameraControls({ context, target: this.player });
@@ -100,6 +110,7 @@ export class World extends Scene {
 
         context.domElement.addEventListener('click', this.onClick.bind(this));
         context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
+        context.domElement.addEventListener("pointermove", this.onPointerMove.bind(this));
 
         const uiCanvas = document.getElementById("ui") as HTMLCanvasElement;
         uiCanvas.width = context.domElement.clientWidth;
@@ -111,6 +122,7 @@ export class World extends Scene {
     public dispose() {
         this.context.domElement.removeEventListener('click', this.onClick);
         this.context.domElement.removeEventListener('contextmenu', this.onRightClick);
+        this.context.domElement.removeEventListener('pointermove', this.onPointerMove);
         this.player.dispose();
     }
 
@@ -118,7 +130,7 @@ export class World extends Scene {
         const [screenRay] = Utils.pool.ray;
         Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
 
-        const { radius, cellResolution } = World.config;
+        const { radius } = World.config;
 
         const isCarryingSomething = Boolean(this.seed) || this.hasWater;
 
@@ -140,11 +152,11 @@ export class World extends Scene {
             }
 
             // check water pit
-            if (Collision.rayCastOnSphere(screenRay, this.waterPit.position, 2)) {
-                this.player.grabWater(this.waterPit);
-                this.hasWater = true;
-                return;
-            }
+            // if (Collision.rayCastOnSphere(screenRay, this.waterPit.position, 2)) {
+            //     this.player.grabWater(this.waterPit);
+            //     this.hasWater = true;
+            //     return;
+            // }
         } 
 
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
@@ -154,45 +166,72 @@ export class World extends Scene {
                 this.player.moveTo(raycast.intersection1.clone());
             }
 
-            // const debug = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0xff0000 }));
-            // debug.position.copy(raycast.intersection1);
-            // this.add(debug);
+            if (this.selectedCell) {
+                // TODO plant 
+            }
+        }
+    }
 
-            const planes = [
-                new Plane(new Vector3(0, -1, 0), World.config.radius),
-                new Plane(new Vector3(1, 0, 0), World.config.radius),
-                new Plane(new Vector3(0, 1, 0), World.config.radius),
-                new Plane(new Vector3(-1, 0, 0), World.config.radius),
-                new Plane(new Vector3(0, 0, 1), World.config.radius),
-                new Plane(new Vector3(0, 0, -1), World.config.radius)
-            ];
+    private onPointerMove(event: PointerEvent) {
+        if (!this.seed) {
+            return;
+        }
 
+        const [screenRay] = Utils.pool.ray;
+        Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
+        const { radius, cellResolution } = World.config;
+        const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
+        if (raycast) {
             const direction = raycast.intersection1.clone().normalize();
             const boxRadius = Math.sqrt(radius * radius + radius * radius) * 2;
             const planeIntersection = new Vector3();
-            const line = new Line3();
-            
+            const line = new Line3();            
             const cellSize = radius * 2 / cellResolution;
+            const { planes } = World;
             for (let i = 0; i < planes.length; i++) {
                 if (planes[i].intersectLine(line.set(Utils.vec3.zero, direction.clone().multiplyScalar(boxRadius)), planeIntersection)) {                    
                     if (Math.abs(planeIntersection.x) > radius
                         || Math.abs(planeIntersection.y) > radius
                         || Math.abs(planeIntersection.z) > radius) {
                         continue;
-                    }
-                    // const debug2 = new Mesh(new SphereGeometry(1), new MeshStandardMaterial({ color: 0x0000ff }));
-                    // debug2.position.copy(planeIntersection);
-                    // this.add(debug2);
+                    }                    
 
                     // get cell coords
-                    const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
-                    const y = -planeIntersection.z + radius; // convert from [radius, -radius] to [0, radius * 2]
+                    const [x, y] = (() => {
+                        if (i === 0) {
+                            const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
+                            const y = -planeIntersection.z + radius; // convert from [radius, -radius] to [0, radius * 2]
+                            return [x, y];
+                        } else if (i === 1) {
+                            const x = planeIntersection.z + radius; // convert from [-radius, radius] to [0, radius * 2]
+                            const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
+                            return [x, y];
+                        } else if (i === 2) {
+                            const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
+                            const y = planeIntersection.z + radius; // convert from [-radius, radius] to [0, radius * 2]
+                            return [x, y];
+                        } else if (i === 3) {
+                            const x = -planeIntersection.z + radius; // convert from [radius, -radius] to [0, radius * 2]
+                            const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
+                            return [x, y];
+                        } else if (i === 4) {
+                            const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
+                            const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
+                            return [x, y];
+                        } else {
+                            const x = planeIntersection.x + radius; // convert from [-radius, radius] to [0, radius * 2]
+                            const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
+                            return [x, y];                    
+                        }
+                    })();
                     const cellX = Math.floor(x / cellSize);
-                    const cellY = Math.floor(y / cellSize);
-
-                    // const cell = this.terrain.getCell(i, cellX, cellY);
-                    // console.log(cell.children.length);
-                    console.log(`plane ${i}, cell ${cellX}, ${cellY}`);
+                    const cellY = Math.floor(y / cellSize);                    
+                    const cell = this.terrain.getCell(i, cellX, cellY);
+                    if (this.selectedCell) {
+                        this.selectedCell.visible = false;
+                    }
+                    cell.visible = true;
+                    this.selectedCell = cell;
                     break;
                 }
             }
