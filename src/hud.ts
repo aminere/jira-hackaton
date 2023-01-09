@@ -38,7 +38,6 @@ export class HUD {
         for (const marker of this.markers) {
             const screenPos = new Vector3();
             Utils.getScreenPosition(marker.target.getWorldPosition(worldPos), this.context, screenPos);
-            this.ctx.lineWidth = 3;
             this.ctx.strokeText(marker.name, screenPos.x, screenPos.y);
             this.ctx.fillText(marker.name, screenPos.x, screenPos.y);
         }
@@ -51,6 +50,7 @@ export class HUD {
         this.ctx.textBaseline = "middle";
         this.ctx.strokeStyle = "black";
         this.ctx.fillStyle = "white";
+        this.ctx.lineWidth = 3;
     }
 }
 

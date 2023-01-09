@@ -1,6 +1,6 @@
 
 import * as THREE from 'three';
-import { BoxGeometry, BufferAttribute, CubeTexture, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, SphereGeometry, Vector2, Vector3 } from 'three';
+import { BoxGeometry, BufferAttribute, CubeTexture, Mesh, MeshBasicMaterial, MeshStandardMaterial, MeshToonMaterial, Object3D, SphereGeometry, Vector2, Vector3 } from 'three';
 import { PerlinNoise } from './perlin-noise';
 import { Utils } from './utils';
 
@@ -184,10 +184,11 @@ export class Terrain extends THREE.Mesh {
         for (let i = 0; i < cellResolution; i++) {
             for (let j = 0; j < cellResolution; j++) {               
                 
+                const size = .9;
                 const geometry = new BoxGeometry(
-                    cellSize * invFaceNormal.x + cellThickness * absNormal.x, 
-                    cellSize * invFaceNormal.y + cellThickness * absNormal.y,
-                    cellSize * invFaceNormal.z + cellThickness * absNormal.z
+                    (cellSize * invFaceNormal.x + cellThickness * absNormal.x) * size, 
+                    (cellSize * invFaceNormal.y + cellThickness * absNormal.y) * size,
+                    (cellSize * invFaceNormal.z + cellThickness * absNormal.z) * size
                 );
                 const positions = geometry.getAttribute("position");
                 for (let i = 0; i < positions.count; i++) {

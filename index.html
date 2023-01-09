@@ -12,20 +12,31 @@
 <body>
   <canvas id="app"></canvas>
   <canvas id="hud"></canvas>
-  <div class="counters">
-    <div class="counter">
-      <img src="/vite.svg" />
-      <span>x 0</span>
+  <div id="ui" style="display: none;">
+    <div class="counters">
+      <div class="counter">
+        <img src="/ui/seed.svg" />
+        <span>x 0</span>
+      </div>
+      <div class="counter">
+        <img src="/ui/coin.svg" />
+        <span>x 0</span>
+      </div>
     </div>
-    <div class="counter">
-      <img src="/vite.svg" />
-      <span>x 0</span>
+    <div class="builders">
+      <button id="build" type="button">
+        <img src="/ui/flower.svg" />
+      </button>
+      <button id="build" type="button">
+        <img src="/ui/bush.svg" />
+      </button>      
+      <button id="build" type="button">
+        <img src="/ui/tree.svg" />
+      </button>
+      <button id="build" type="button">
+        <img src="/ui/water.svg" />
+      </button>      
     </div>
-  </div>
-  <div class="builders">
-    <button id="build" type="button">
-      <img src="/vite.svg" />
-    </button>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>

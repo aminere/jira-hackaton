@@ -2,6 +2,7 @@ html,
 body {
     margin: 0;
     height: 100%;
+    font-family: Libre Baskerville;
 }
 
 #app {
@@ -20,47 +21,55 @@ body {
 }
 
 button {
-    background-color: cadetblue;
+    background-color: transparent;
     cursor: pointer;
     border: 1px solid black;
     border-radius: 12px;
     transition: background-color 0.2s;
     padding: 3vmin;
-    margin: 2vmin;
+    width: 8vmax;
+    height: 8vmax;
 }
 
 button:hover {
-    background-color: gray;   
+    background-color: rgb(220, 220, 220)    
 }
 
 button:active {
     background-color: yellow;   
 }
 
+img {
+    width: 4vmax;
+    max-width: 100%;
+}
+
 .counters {   
     position: absolute;
     left: 0;
-    top: 0;    
+    top: 0;
+    display: flex;
 }
 
 .counter {    
     display: flex;
-    gap: 1vmin;
+    gap: 2vmin;
     margin: 2vmin;
     color: white;
     text-shadow: 1px 1px black;
-    font-size: 3vmax;
+    font-size: 2.5vmax;
     align-items: center;
 }
 
-.counter > img {
-    width: 4vmax;
-}
-
 .builders {
-    position: absolute;
-    left: 0;
-    bottom: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    display: flex;
+    flex-direction: row;
+    /* flex-flow: row-reverse; */
+    gap: 2vmin;
+    margin: 2vmin;
 }
 
 

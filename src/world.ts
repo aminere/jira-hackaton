@@ -113,11 +113,12 @@ export class World extends Scene {
         context.domElement.addEventListener("pointermove", this.onPointerMove.bind(this));
 
         window.addEventListener("resize", this.onResize.bind(this));
+
         const hudCanvas = document.getElementById("hud") as HTMLCanvasElement;
         hudCanvas.width = context.domElement.clientWidth;
         hudCanvas.height = context.domElement.clientHeight;
         this.hud = new HUD(hudCanvas, context);
-        this.hud.addMarker(tree, "Seed Tree");
+        // this.hud.addMarker(tree, "Seed Tree");
 
         const build = document.getElementById("build") as HTMLButtonElement;
         build.onclick = () => console.log("build");
@@ -238,7 +239,7 @@ export class World extends Scene {
                     cell.visible = true;
                     this.selectedCell = cell;
                     const color = cell.content ? 0xff0000 : 0x00ff00;
-                    (cell.mesh.material as MeshBasicMaterial).color = new Color(color);
+                    // (cell.mesh.material as MeshBasicMaterial).color = new Color(color);
                     break;
                 }
             }
