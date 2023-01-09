@@ -189,9 +189,9 @@ export class Terrain extends THREE.Mesh {
 
                     // project on sphere while preserving height
                     normal.set(
-                        x + currentPos.x * invFaceNormal.x + faceNormal.x * radius, 
-                        y + currentPos.y * invFaceNormal.y + faceNormal.y * radius, 
-                        z + currentPos.z * invFaceNormal.z + faceNormal.z * radius
+                        x * invFaceNormal.x + currentPos.x * invFaceNormal.x + faceNormal.x * radius, 
+                        y * invFaceNormal.y + currentPos.y * invFaceNormal.y + faceNormal.y * radius, 
+                        z * invFaceNormal.z + currentPos.z * invFaceNormal.z + faceNormal.z * radius
                         ).normalize();
                     
                     const normalFactor = worldSpacePos.set(x, y, z).dot(faceNormal);
