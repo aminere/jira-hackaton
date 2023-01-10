@@ -15,8 +15,15 @@ export class Terrain extends THREE.Mesh {
     private faces: Object3D[];
     private props: ITerrainOptions;
 
-    public getCell(face: number, x: number, y: number) {
-        return this.faces[face].children[y * this.props.cellResolution + x] as Cell;
+    public static materials = {
+        valid: new MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: .6, side: THREE.DoubleSide }),
+        invalid: new MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: .6, side: THREE.DoubleSide }),
+        selected: new MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: .6, side: THREE.DoubleSide })
+    };    
+
+    public getCell(coords: Vector3) {        
+        const { x: face, y: x, z: y } = coords;
+        return this.faces[face].children[Math.round(y) * this.props.cellResolution + Math.round(x)] as Cell;
     }
 
     public constructor(props: ITerrainOptions) {        
@@ -112,37 +119,37 @@ export class Terrain extends THREE.Mesh {
         this.props = props;
         
         const faces: Object3D[] = [
-            this.createFace({
+            this.createFace(0, {
                 startPos: new Vector3(props.radius, props.radius, props.radius),
                 faceNormal: new Vector3(0, 1, 0),
                 geometryOffsetDir: new Vector3(-1, 0, -1),
                 scanDirection: [new Vector3(-1, 0, 0), new Vector3(0, 0, -1)]
             }),
-            this.createFace({
+            this.createFace(1, {
                 startPos: new Vector3(-props.radius, props.radius, -props.radius),
                 faceNormal: new Vector3(-1, 0, 0),
                 geometryOffsetDir: new Vector3(0, -1, 1),
                 scanDirection: [new Vector3(0, 0, 1), new Vector3(0, -1, 0)],
             }),
-            this.createFace({
+            this.createFace(2, {
                 startPos: new Vector3(props.radius, -props.radius, -props.radius),
                 faceNormal: new Vector3(0, -1, 0),
                 geometryOffsetDir: new Vector3(-1, 0, 1),
                 scanDirection: [new Vector3(-1, 0, 0), new Vector3(0, 0, 1)]
             }),
-            this.createFace({
+            this.createFace(3, {
                 startPos: new Vector3(props.radius, props.radius, props.radius),
                 faceNormal: new Vector3(1, 0, 0),
                 geometryOffsetDir: new Vector3(0, -1, -1),
                 scanDirection: [new Vector3(0, 0, -1), new Vector3(0, -1, 0)],
             }),
-            this.createFace({
+            this.createFace(4, {
                 startPos: new Vector3(props.radius, props.radius, -props.radius),
                 faceNormal: new Vector3(0, 0, -1),
                 geometryOffsetDir: new Vector3(-1, -1, 0),
                 scanDirection: [new Vector3(-1, 0, 0), new Vector3(0, -1, 0)]
             }),
-            this.createFace({
+            this.createFace(5, {
                 startPos: new Vector3(-props.radius, props.radius, props.radius),
                 faceNormal: new Vector3(0, 0, 1),
                 geometryOffsetDir: new Vector3(1, -1, 0),
@@ -152,14 +159,15 @@ export class Terrain extends THREE.Mesh {
         this.faces = faces;
     }
 
-    private createFace(settings: {
-        startPos: Vector3;
-        faceNormal: Vector3; 
-        geometryOffsetDir: Vector3;
-        scanDirection: [Vector3, Vector3];
-    }) {
+    private createFace(
+        index: number,
+        settings: {
+            startPos: Vector3;
+            faceNormal: Vector3;
+            geometryOffsetDir: Vector3;
+            scanDirection: [Vector3, Vector3];
+        }) {
         const { startPos, faceNormal, geometryOffsetDir, scanDirection } = settings;
-        const cellMaterial = new MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: .8, side: THREE.DoubleSide });        
         const { radius, cellResolution } = this.props;
         const cellSize = radius * 2 / cellResolution;
         const cellThickness = .5;
@@ -196,10 +204,10 @@ export class Terrain extends THREE.Mesh {
                     currentPos.z * invFaceNormal.z + faceNormal.z * radius
                 );
                 
-                for (let i = 0; i < positions.count; i++) {
-                    const x = positions.getX(i) + geometryOffset.x;
-                    const y = positions.getY(i) + geometryOffset.y;
-                    const z = positions.getZ(i) + geometryOffset.z;
+                for (let k = 0; k < positions.count; k++) {
+                    const x = positions.getX(k) + geometryOffset.x;
+                    const y = positions.getY(k) + geometryOffset.y;
+                    const z = positions.getZ(k) + geometryOffset.z;
 
                     // project on sphere while preserving height
                     normal.set(
@@ -213,31 +221,24 @@ export class Terrain extends THREE.Mesh {
                         .multiplyScalar(radius)
                         .addScaledVector(normal, normalFactor);
                         
-                    positions.setX(i, position.x);
-                    positions.setY(i, position.y);
-                    positions.setZ(i, position.z);
+                    positions.setX(k, position.x);
+                    positions.setY(k, position.y);
+                    positions.setZ(k, position.z);
                 }
 
-                const material = cellMaterial.clone();
                 const cellPosition = new Vector3()
                     .copy(positionOffset)
                     .addScaledVector(horizScan, cellSize / 2)
                     .addScaledVector(vertScan, cellSize / 2)
                     .normalize()
                     .multiplyScalar(radius);
-                const cell = new Cell(new Mesh(geometry, material), cellPosition);
+                const cell = new Cell(new Mesh(geometry, Terrain.materials.valid), cellPosition, new Vector3(index, j, i));
                 face.add(cell);
                 cell.visible = false;
-                currentPos.addScaledVector(horizScan, cellSize);
-
-                // debug
-                // const debug = new Mesh(new SphereGeometry(1, 16, 16), new MeshBasicMaterial({ color: 0xff0000 }));
-                // debug.position.copy(cellPosition);
-                // this.add(debug);
+                currentPos.addScaledVector(horizScan, cellSize);                
             }
             currentPos.copy(startPos).addScaledVector(vertScan, cellSize * (i + 1));
         }
-        // console.log(face.children.length);
         return face;
     }
 }

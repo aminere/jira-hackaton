@@ -18,18 +18,26 @@ export class Utils {
         ray: [...Array(16)].map(_ => new Ray())
     };
 
-    public static castOnSphere(object: Object3D, radius: number) {
-        const [right, forward, up] = Utils.pool.vec3;
-        up.copy(object.position).normalize();
-        object.position.copy(up).multiplyScalar(radius);
-        if (Math.abs(up.dot(Utils.vec3.up)) < 1) {            
-            right.crossVectors(up, Utils.vec3.up);
-            forward.crossVectors(right, up).normalize();
-            const [lookAt] = Utils.pool.mat4;
-            lookAt.lookAt(Utils.vec3.zero, forward, up);
-            object.quaternion.setFromRotationMatrix(lookAt);
-        }
+    public static getBasisFromNormal(normal: Vector3, right: Vector3, forward: Vector3) {        
+        const dot = normal.dot(Utils.vec3.up);
+        if (Math.abs(dot) < 1) {            
+            right.crossVectors(Utils.vec3.up, normal).normalize();
+            forward.crossVectors(right, normal).normalize();
+        } else {
+            right.set(1, 0, 0);
+            forward.set(0, 0, Math.sign(dot));
+        }        
     }    
+
+    public static castOnSphere(object: Object3D, radius: number) {
+        const [right, forward, normal] = Utils.pool.vec3;
+        normal.copy(object.position).normalize();    
+        Utils.getBasisFromNormal(normal, right, forward);
+        object.position.copy(normal).multiplyScalar(radius);
+        const [lookAt] = Utils.pool.mat4;
+        lookAt.lookAt(Utils.vec3.zero, forward, normal);
+        object.quaternion.setFromRotationMatrix(lookAt);
+    }
 
     public static setParent(object: Object3D, parent: Object3D) {
         // changes the parent while preserving the world position

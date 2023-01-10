@@ -7,7 +7,7 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { BoxGeometry, Color, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, TubeGeometry, Vector3 } from "three";
+import { BoxGeometry, Color, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, TubeGeometry, Vector2, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext, ISeed } from './types';
@@ -32,13 +32,13 @@ interface IState {
 export class World extends Scene {
 
     private static config = {
-        radius: 20,
-        cellResolution: 10,
+        radius: 30,
+        cellResolution: 12,
     };
 
     private player!: Player;
     private cameraControls!: CameraControls;
-    private seedTrees: SeedTree[] = [];
+    private trees: SeedTree[] = [];
     private context: IContext;
     private cursor: string | null = null;
     private hud: HUD;
@@ -46,6 +46,7 @@ export class World extends Scene {
     private selectedCell: Cell | null = null; 
 
     private flowers: Object3D[] = [];
+    private flowerCells: Cell[] = [];
 
     private state: IState = {
         seedCount: 0,
@@ -109,18 +110,8 @@ export class World extends Scene {
 
         this.addSky(this.player, context.debugUI);
 
-        const tree = new SeedTree(context);
-        tree.position.set(0, radius, 0).addScaledVector(this.player.forward, 20);
-        Utils.castOnSphere(tree, radius);
-        this.add(tree);
-        this.seedTrees.push(tree);
-
-        // const waterPit = new WaterPit(context);
-        // waterPit.position.set(0, radius, 0)
-        //     .addScaledVector(this.player.forward, 15)
-        //     .addScaledVector(this.player.right, -10);
-        // Utils.castOnSphere(waterPit, radius);
-        // this.add(waterPit);
+        this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution / 2 - 1, 4)));
+        // this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution - 1, 4)));
 
         this.load();
 
@@ -148,13 +139,17 @@ export class World extends Scene {
         buildWater.onclick =() => this.enterBuildMode("water");
     }
 
+    private castOnSphere(object: Object3D) {
+        const { radius } = World.config;
+        Utils.castOnSphere(object, radius);
+    }
+
     private buildFlower(cell: Cell) { 
-        const { radius } = World.config;       
         const [normal] = Utils.pool.vec3;
         normal.copy(cell.worldPos).normalize();                
-        const flower = new Object3D();
+        const flower = new Object3D();        
         flower.position.copy(cell.worldPos);
-        Utils.castOnSphere(flower, radius);
+        this.castOnSphere(flower);
         const flowerMesh = new Mesh(new BoxGeometry(.5, 2, .5), new MeshBasicMaterial({ color: 0x00ff00 }));
         flowerMesh.position.y = 1;
         flower.add(flowerMesh);
@@ -162,6 +157,7 @@ export class World extends Scene {
         this.add(flower);
         this.flowers.push(flower);                    
         this.state.seedCount--;
+        cell.mesh.material = Terrain.materials.invalid;
     }
 
     private buildBush(cell: Cell) {        
@@ -169,19 +165,68 @@ export class World extends Scene {
     }
 
     private buildTree(cell: Cell) {
-        // todo build tree
-        this.updateFlowerCells(); // flowers at a radius from trees
+        const tree = new SeedTree(this.context);
+        tree.position.copy(cell.worldPos);
+        this.castOnSphere(tree);        
+        cell.content = tree;
+        this.add(tree);
+        this.trees.push(tree);
+        this.updateFlowerCells(cell); // flowers at a radius from trees
     }
 
-    private buildWater(cell: Cell) {        
-        // todo build water
+    private buildWater(cell: Cell) {
+        // const waterPit = new WaterPit(context);
+        // waterPit.position.set(0, radius, 0)
+        //     .addScaledVector(this.player.forward, 15)
+        //     .addScaledVector(this.player.right, -10);
+        // Utils.castOnSphere(waterPit, radius);
+        // this.add(waterPit);
+
         this.updateBushCells(); // bushes at a radius from water
         this.updateWaterCells(); // water cells at a radius from each other
         this.updateTreeCells(); // trees in between water cells
     }
+    
+    private updateFlowerCells(newTree: Cell) {
+        const flowerRadius = 10;
+        const { radius, cellResolution } = World.config;
+        const cellSize = radius * 2 / cellResolution;
+        
+        const cells: Cell[] = [];
 
-    private updateFlowerCells() {
+        const [normal, right, forward, startPos, currentPos, cellCoords, planeIntersection, lineEnd] = Utils.pool.vec3;
+        normal.copy(newTree.worldPos).normalize();
+        Utils.getBasisFromNormal(normal, right, forward);
+        startPos.copy(newTree.worldPos)
+            .addScaledVector(right, flowerRadius)
+            .addScaledVector(forward, flowerRadius);             
+        
+        currentPos.copy(startPos);
+        const stepSize = cellSize / 2;
+        const steps = Math.round((flowerRadius * 2) / stepSize);
+        const cellPos = new Vector3();
+        const { valid, invalid } = Terrain.materials;
+        for (let i = 0; i <= steps; i++) {
+            for (let j = 0; j <= steps; j++) {
 
+                cellPos.copy(currentPos).normalize().multiplyScalar(radius);
+
+                if (this.getCellCoordsFromSpherePos(cellPos, cellCoords, planeIntersection, lineEnd)) {
+                    const cell = this.terrain.getCell(cellCoords);
+                    const checked = cell.checked["flower"];
+                    if (!checked) {
+                        cells.push(cell);
+                        cell.mesh.material = cell.content ? invalid : valid;
+                        cell.checked["flower"] = true;
+                    }
+                }
+
+                currentPos.addScaledVector(right, -stepSize);
+            }
+            currentPos.copy(startPos).addScaledVector(forward, -stepSize * (i + 1));
+        }
+
+        this.flowerCells = [...this.flowerCells, ...cells];
     }
 
     private updateBushCells() {
@@ -211,7 +256,7 @@ export class World extends Scene {
         const { radius } = World.config;
 
         // check seeds
-        for (const seedTree of this.seedTrees) {
+        for (const seedTree of this.trees) {
             const seed = seedTree.rayCast(screenRay);
             if (seed) {
                 seedTree.removeSeed(seed);
@@ -223,8 +268,11 @@ export class World extends Scene {
 
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
+            
+
             if (this.selectedCell) {
-                if (!this.selectedCell.content) {
+                const canPlant = !this.selectedCell.content && this.selectedCell.checked[this.state.action];
+                if (canPlant) {
                     switch (this.state.action) {
                         case "flower":
                             this.buildFlower(this.selectedCell);
@@ -275,6 +323,11 @@ export class World extends Scene {
                 if (!checkSeeds()) {
                     return;
                 }
+
+                this.flowerCells.forEach(cell => {
+                    cell.visible = true;
+                });
+
                 break;
             case "bush":
                 if (!checkSeeds()) {
@@ -308,7 +361,12 @@ export class World extends Scene {
             this.selectedCell.visible = false;
             this.selectedCell = null;
         }
-        this.cameraControls.freezeYaw = false;        
+        this.cameraControls.freezeYaw = false;
+        switch(this.state.action) {
+            case "flower":
+                this.flowerCells.forEach(cell => cell.visible = false);
+                break;
+        }
         this.state.action = "none";
     }
 
@@ -325,7 +383,7 @@ export class World extends Scene {
 
         if (this.state.action === "none") {
             // check seeds
-            for (const seedTree of this.seedTrees) {
+            for (const seedTree of this.trees) {
                 const seed = seedTree.rayCast(screenRay);
                 if (seed) {
                     if (this.cursor !== "grab") {
@@ -341,65 +399,84 @@ export class World extends Scene {
 
         this.updateCursor();
         Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
-        const { radius, cellResolution } = World.config;
+        const { radius } = World.config;
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
-            const direction = raycast.intersection1.clone().normalize();
-            const boxRadius = Math.sqrt(radius * radius + radius * radius) * 2;
-            const planeIntersection = new Vector3();
-            const line = new Line3();            
-            const cellSize = radius * 2 / cellResolution;
-            const { planes } = World;
-            for (let i = 0; i < planes.length; i++) {
-                if (planes[i].intersectLine(line.set(Utils.vec3.zero, direction.clone().multiplyScalar(boxRadius)), planeIntersection)) {                    
-                    if (Math.abs(planeIntersection.x) > radius
-                        || Math.abs(planeIntersection.y) > radius
-                        || Math.abs(planeIntersection.z) > radius) {
-                        continue;
-                    }                    
-
-                    // get cell coords
-                    const [x, y] = (() => {
-                        if (i === 0) {
-                            const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
-                            const y = -planeIntersection.z + radius; // convert from [radius, -radius] to [0, radius * 2]
-                            return [x, y];
-                        } else if (i === 1) {
-                            const x = planeIntersection.z + radius; // convert from [-radius, radius] to [0, radius * 2]
-                            const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
-                            return [x, y];
-                        } else if (i === 2) {
-                            const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
-                            const y = planeIntersection.z + radius; // convert from [-radius, radius] to [0, radius * 2]
-                            return [x, y];
-                        } else if (i === 3) {
-                            const x = -planeIntersection.z + radius; // convert from [radius, -radius] to [0, radius * 2]
-                            const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
-                            return [x, y];
-                        } else if (i === 4) {
-                            const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
-                            const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
-                            return [x, y];
-                        } else {
-                            const x = planeIntersection.x + radius; // convert from [-radius, radius] to [0, radius * 2]
-                            const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
-                            return [x, y];                    
-                        }
-                    })();
-                    const cellX = Math.floor(x / cellSize);
-                    const cellY = Math.floor(y / cellSize);                    
-                    const cell = this.terrain.getCell(i, cellX, cellY);
+            const [cellCoords, planeIntersection, lineEnd] = Utils.pool.vec3;
+            if (this.getCellCoordsFromSpherePos(raycast.intersection1, cellCoords, planeIntersection, lineEnd)) {
+                const cell = this.terrain.getCell(cellCoords);
+                if (cell !== this.selectedCell) {
+                    const { valid, invalid, selected } = Terrain.materials;
                     if (this.selectedCell) {
-                        this.selectedCell.visible = false;
+                        if (this.selectedCell.checked[this.state.action]) {
+                            this.selectedCell.mesh.material = this.selectedCell.content ? invalid : valid;
+                        } else {
+                            this.selectedCell.visible = false;
+                        }
                     }                    
                     cell.visible = true;
+                    if (cell.checked[this.state.action]) {
+                        cell.mesh.material = cell.content ? invalid: selected;
+                    } else {
+                        cell.mesh.material = invalid;
+                    }                
                     this.selectedCell = cell;
-                    const color = cell.content ? 0xff0000 : 0x00ff00;
-                    (cell.mesh.material as MeshBasicMaterial).color = new Color(color);
-                    break;
                 }
             }
         }
+    }
+
+    private getCellCoordsFromSpherePos(spherePos: Vector3, cellCoords: Vector3, planeIntersection: Vector3, lineEnd: Vector3) {
+        const { radius, cellResolution } = World.config;
+        const boxRadius = Math.sqrt(radius * radius + radius * radius) * 2;
+        lineEnd.copy(spherePos).normalize().multiplyScalar(boxRadius);
+        const line = new Line3();
+        const cellSize = radius * 2 / cellResolution;
+        const { planes } = World;
+        const epsilon = 0.0001;
+        for (let i = 0; i < planes.length; i++) {
+            if (planes[i].intersectLine(line.set(Utils.vec3.zero, lineEnd), planeIntersection)) {                    
+                if (Math.abs(planeIntersection.x) > radius + epsilon
+                    || Math.abs(planeIntersection.y) > radius + epsilon
+                    || Math.abs(planeIntersection.z) > radius + epsilon) {
+                    continue;
+                }
+
+                // get cell coords
+                const [x, y] = (() => {
+                    if (i === 0) {
+                        const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
+                        const y = -planeIntersection.z + radius; // convert from [radius, -radius] to [0, radius * 2]
+                        return [x, y];
+                    } else if (i === 1) {
+                        const x = planeIntersection.z + radius; // convert from [-radius, radius] to [0, radius * 2]
+                        const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
+                        return [x, y];
+                    } else if (i === 2) {
+                        const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
+                        const y = planeIntersection.z + radius; // convert from [-radius, radius] to [0, radius * 2]
+                        return [x, y];
+                    } else if (i === 3) {
+                        const x = -planeIntersection.z + radius; // convert from [radius, -radius] to [0, radius * 2]
+                        const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
+                        return [x, y];
+                    } else if (i === 4) {
+                        const x = -planeIntersection.x + radius; // convert from [radius, -radius] to [0, radius * 2]
+                        const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
+                        return [x, y];
+                    } else {
+                        const x = planeIntersection.x + radius; // convert from [-radius, radius] to [0, radius * 2]
+                        const y = -planeIntersection.y + radius; // convert from [radius, -radius] to [0, radius * 2]
+                        return [x, y];
+                    }
+                })();
+                const cellX = Math.floor(x / cellSize);
+                const cellY = Math.floor(y / cellSize);
+                cellCoords.set(i, cellX, cellY);
+                return true;
+            }
+        }
+        return false;
     }
     
     private updateUI() {
@@ -474,7 +551,7 @@ export class World extends Scene {
         }
 
         this.player.update(deltaTime);
-        this.seedTrees.forEach(t => t.update(deltaTime));
+        this.trees.forEach(t => t.update(deltaTime));
         this.hud.update(deltaTime);
     }
 
