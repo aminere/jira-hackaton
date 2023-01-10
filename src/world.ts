@@ -7,7 +7,7 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { BoxGeometry, Color, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, Vector3 } from "three";
+import { BoxGeometry, Color, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, TubeGeometry, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext, ISeed } from './types';
@@ -139,31 +139,60 @@ export class World extends Scene {
         // this.hud.addMarker(tree, "Seed Tree");
 
         const buildFlower = document.getElementById("buildFlower") as HTMLButtonElement;
-        buildFlower.onclick = this.buildFlower.bind(this);
+        buildFlower.onclick = () => this.enterBuildMode("flower");
         const buildBush = document.getElementById("buildBush") as HTMLButtonElement;
-        buildBush.onclick = this.buildBush.bind(this);
+        buildBush.onclick = () => this.enterBuildMode("bush");
         const buildTree = document.getElementById("buildTree") as HTMLButtonElement;
-        buildTree.onclick = this.buildTree.bind(this);
+        buildTree.onclick = () => this.enterBuildMode("tree");
         const buildWater = document.getElementById("buildWater") as HTMLButtonElement;
-        buildWater.onclick = this.buildWater.bind(this);
+        buildWater.onclick =() => this.enterBuildMode("water");
     }
 
-    private buildFlower() {        
-        if (this.state.seedCount < 1) {
-             // TODO: show message
-             console.log("not enough seeds");
-             return;            
-        }
-        this.enterBuildMode("flower");       
+    private buildFlower(cell: Cell) { 
+        const { radius } = World.config;       
+        const [normal] = Utils.pool.vec3;
+        normal.copy(cell.worldPos).normalize();                
+        const flower = new Object3D();
+        flower.position.copy(cell.worldPos);
+        Utils.castOnSphere(flower, radius);
+        const flowerMesh = new Mesh(new BoxGeometry(.5, 2, .5), new MeshBasicMaterial({ color: 0x00ff00 }));
+        flowerMesh.position.y = 1;
+        flower.add(flowerMesh);
+        cell.content = flower;
+        this.add(flower);
+        this.flowers.push(flower);                    
+        this.state.seedCount--;
     }
-    private buildBush() {    
-        console.log("todo");
+
+    private buildBush(cell: Cell) {        
+        console.log("todo buildBush");
     }
-    private buildTree() {   
-        console.log("todo");     
+
+    private buildTree(cell: Cell) {
+        // todo build tree
+        this.updateFlowerCells(); // flowers at a radius from trees
     }
-    private buildWater() {  
-        console.log("todo");      
+
+    private buildWater(cell: Cell) {        
+        // todo build water
+        this.updateBushCells(); // bushes at a radius from water
+        this.updateWaterCells(); // water cells at a radius from each other
+        this.updateTreeCells(); // trees in between water cells
+    }
+
+    private updateFlowerCells() {
+
+    }
+
+    private updateBushCells() {
+
+    }
+
+    private updateWaterCells() {
+    }
+
+    private updateTreeCells() {
+
     }
 
     public dispose() {
@@ -196,18 +225,20 @@ export class World extends Scene {
         if (raycast) {
             if (this.selectedCell) {
                 if (!this.selectedCell.content) {
-                    const [normal] = Utils.pool.vec3;
-                    normal.copy(this.selectedCell.worldPos).normalize();                
-                    const flower = new Object3D();
-                    flower.position.copy(this.selectedCell.worldPos);
-                    Utils.castOnSphere(flower, radius);
-                    const flowerMesh = new Mesh(new BoxGeometry(.5, 2, .5), new MeshBasicMaterial({ color: 0x00ff00 }));
-                    flowerMesh.position.y = 1;
-                    flower.add(flowerMesh);
-                    this.selectedCell.content = flower;
-                    this.add(flower);
-                    this.flowers.push(flower);                    
-                    this.state.seedCount--;
+                    switch (this.state.action) {
+                        case "flower":
+                            this.buildFlower(this.selectedCell);
+                            break;
+                        case "bush":
+                            this.buildBush(this.selectedCell);
+                            break;
+                        case "tree":
+                            this.buildTree(this.selectedCell);
+                            break;
+                        case "water":
+                            this.buildWater(this.selectedCell);
+                            break;
+                    }
                     this.updateUI();
                     this.exitBuildMode();
                 }                
@@ -220,6 +251,54 @@ export class World extends Scene {
     }    
 
     private enterBuildMode(action: Action) {
+
+        const checkSeeds = () => {
+            if (this.state.seedCount < 1) {
+                // TODO: show message
+                console.log("not enough seeds");
+                return false;
+           }
+           return true;
+        };
+
+        const checkCoins = (count: number) => {
+            if (this.state.coins < count) {
+                // TODO: show message
+                console.log("not enough coins");
+                return false;
+           }
+           return true;
+        };
+
+        switch (action) {
+            case "flower":
+                if (!checkSeeds()) {
+                    return;
+                }
+                break;
+            case "bush":
+                if (!checkSeeds()) {
+                    return;
+                }
+                if (!checkCoins(1)) {
+                    return;
+                }
+                break;
+            case "tree":
+                if (!checkSeeds()) {
+                    return;
+                }
+                if (!checkCoins(2)) {
+                    return;
+                }
+                break;
+            case "water":
+                if (!checkCoins(3)) {
+                    return;
+                }
+                break;
+        }        
+
         this.state.action = action;
         this.cameraControls.freezeYaw = true;
     }
@@ -312,7 +391,7 @@ export class World extends Scene {
                     const cell = this.terrain.getCell(i, cellX, cellY);
                     if (this.selectedCell) {
                         this.selectedCell.visible = false;
-                    }
+                    }                    
                     cell.visible = true;
                     this.selectedCell = cell;
                     const color = cell.content ? 0xff0000 : 0x00ff00;
@@ -335,20 +414,21 @@ export class World extends Scene {
     private addSky(parent: Object3D, gui: GUI) {
         const sky = new Sky();
         sky.scale.setScalar(10000);
+        sky.rotateX(Math.PI / 2);
         parent.add(sky);
 
         const uniforms = sky.material.uniforms;
 
         const skySettings = {
-            turbidity: 0.1,
-            rayleigh: 0.194,
-            mieCoefficient: 0.003,
+            turbidity: 1,
+            rayleigh: 0.106,
+            mieCoefficient: 0.002,
             mieDirectionalG: 0.975            
         };
 
         const sunSettings = {
             elevation: 32,
-            azimuth: 180
+            azimuth: 20
         };
 
         const skyFolder = gui.addFolder('Sky');

@@ -1,4 +1,4 @@
-import { Camera, Euler, Matrix4, Object3D, Quaternion, Ray, Vector2, Vector3 } from "three";
+import { Euler, Matrix4, Object3D, Quaternion, Ray, Vector3 } from "three";
 import { IContext } from "./types";
 
 export class Utils {

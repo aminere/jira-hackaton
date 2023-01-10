@@ -150,7 +150,7 @@ export class Terrain extends THREE.Mesh {
             })
         ];
         this.faces = faces;
-    }    
+    }
 
     private createFace(settings: {
         startPos: Vector3;
@@ -237,6 +237,7 @@ export class Terrain extends THREE.Mesh {
             }
             currentPos.copy(startPos).addScaledVector(vertScan, cellSize * (i + 1));
         }
+        // console.log(face.children.length);
         return face;
     }
 }
