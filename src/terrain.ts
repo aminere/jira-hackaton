@@ -12,7 +12,7 @@ interface ITerrainOptions {
 
 export class Terrain extends THREE.Mesh {
 
-    private faces: Object3D[];
+    public faces: Object3D[];
     private props: ITerrainOptions;
 
     public static materials = {

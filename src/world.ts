@@ -39,6 +39,7 @@ export class World extends Scene {
     private player!: Player;
     private cameraControls!: CameraControls;
     private trees: SeedTree[] = [];
+    private waterPits: WaterPit[] = [];
     private context: IContext;
     private cursor: string | null = null;
     private hud: HUD;
@@ -46,7 +47,10 @@ export class World extends Scene {
     private selectedCell: Cell | null = null; 
 
     private flowers: Object3D[] = [];
+    private bushes: Object3D[] = [];
     private flowerCells: Cell[] = [];
+    private bushCells: Cell[] = [];
+    private waterCells: Cell[] = [];
 
     private state: IState = {
         seedCount: 0,
@@ -111,6 +115,7 @@ export class World extends Scene {
         this.addSky(this.player, context.debugUI);
 
         this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution / 2 - 1, 4)));
+        this.buildWater(this.terrain.getCell(new Vector3(0, cellResolution / 2 + 2, 4)))
         // this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution - 1, 4)));
 
         this.load();
@@ -161,13 +166,25 @@ export class World extends Scene {
     }
 
     private buildBush(cell: Cell) {        
-        console.log("todo buildBush");
+        const [normal] = Utils.pool.vec3;
+        normal.copy(cell.worldPos).normalize();                
+        const bush = new Object3D();        
+        bush.position.copy(cell.worldPos);
+        this.castOnSphere(bush);
+        const bushMesh = new Mesh(new BoxGeometry(.5, 2, .5), new MeshBasicMaterial({ color: 0x0000ff }));
+        bushMesh.position.y = 1;
+        bush.add(bushMesh);
+        cell.content = bush;
+        this.add(bush);
+        this.bushes.push(bush);                    
+        this.state.seedCount--;
+        cell.mesh.material = Terrain.materials.invalid;
     }
 
     private buildTree(cell: Cell) {
         const tree = new SeedTree(this.context);
         tree.position.copy(cell.worldPos);
-        this.castOnSphere(tree);        
+        this.castOnSphere(tree);
         cell.content = tree;
         this.add(tree);
         this.trees.push(tree);
@@ -175,15 +192,29 @@ export class World extends Scene {
     }
 
     private buildWater(cell: Cell) {
-        // const waterPit = new WaterPit(context);
-        // waterPit.position.set(0, radius, 0)
-        //     .addScaledVector(this.player.forward, 15)
-        //     .addScaledVector(this.player.right, -10);
-        // Utils.castOnSphere(waterPit, radius);
-        // this.add(waterPit);
+        const waterPit = new WaterPit(this.context);
+        waterPit.position.copy(cell.worldPos);
+        this.castOnSphere(waterPit);
+        cell.content = waterPit;
+        this.add(waterPit);
+        
+        if (this.waterPits.length === 0) {
+            // init water cells
+            this.waterCells = [];
+            this.terrain.faces.forEach(face => {
+                face.children.forEach(c => {
+                    const _cell = c as Cell;
+                    _cell.checked["water"] = true;
+                    _cell.valid["water"] = !Boolean(_cell.content);
+                    this.waterCells.push(_cell);
+                });
+            });
+        }
 
-        this.updateBushCells(); // bushes at a radius from water
-        this.updateWaterCells(); // water cells at a radius from each other
+        this.waterPits.push(waterPit);        
+
+        this.updateBushCells(cell); // bushes at a radius from water
+        this.updateWaterCells(cell); // water cells at a radius from each other
         this.updateTreeCells(); // trees in between water cells
     }
     
@@ -218,6 +249,7 @@ export class World extends Scene {
                         cells.push(cell);
                         cell.mesh.material = cell.content ? invalid : valid;
                         cell.checked["flower"] = true;
+                        cell.valid["flower"] = !Boolean(cell.content);
                     }
                 }
 
@@ -229,11 +261,51 @@ export class World extends Scene {
         this.flowerCells = [...this.flowerCells, ...cells];
     }
 
-    private updateBushCells() {
+    private updateBushCells(newWater: Cell) {
+        const bushRadius = 8;
+        const { radius, cellResolution } = World.config;
+        const cellSize = radius * 2 / cellResolution;
+        
+        const cells: Cell[] = [];
 
+        const [normal, right, forward, startPos, currentPos, cellCoords, planeIntersection, lineEnd] = Utils.pool.vec3;
+        normal.copy(newWater.worldPos).normalize();
+        Utils.getBasisFromNormal(normal, right, forward);
+        startPos.copy(newWater.worldPos)
+            .addScaledVector(right, bushRadius)
+            .addScaledVector(forward, bushRadius);             
+        
+        currentPos.copy(startPos);
+        const stepSize = cellSize / 2;
+        const steps = Math.round((bushRadius * 2) / stepSize);
+        const cellPos = new Vector3();
+        const { valid, invalid } = Terrain.materials;
+        for (let i = 0; i <= steps; i++) {
+            for (let j = 0; j <= steps; j++) {
+
+                cellPos.copy(currentPos).normalize().multiplyScalar(radius);
+
+                if (this.getCellCoordsFromSpherePos(cellPos, cellCoords, planeIntersection, lineEnd)) {
+                    const cell = this.terrain.getCell(cellCoords);
+                    const checked = cell.checked["bush"];
+                    if (!checked) {
+                        cells.push(cell);
+                        cell.mesh.material = cell.content ? invalid : valid;
+                        cell.checked["bush"] = true;
+                        cell.valid["bush"] = !Boolean(cell.content);
+                    }
+                }
+
+                currentPos.addScaledVector(right, -stepSize);
+            }
+            currentPos.copy(startPos).addScaledVector(forward, -stepSize * (i + 1));
+        }
+
+        this.bushCells = [...this.bushCells, ...cells];
     }
 
-    private updateWaterCells() {
+    private updateWaterCells(cell: Cell) {
+
     }
 
     private updateTreeCells() {
@@ -271,7 +343,7 @@ export class World extends Scene {
             
 
             if (this.selectedCell) {
-                const canPlant = !this.selectedCell.content && this.selectedCell.checked[this.state.action];
+                const canPlant = !this.selectedCell.content && this.selectedCell.valid[this.state.action];
                 if (canPlant) {
                     switch (this.state.action) {
                         case "flower":
@@ -300,6 +372,8 @@ export class World extends Scene {
 
     private enterBuildMode(action: Action) {
 
+        this.exitBuildMode();
+
         const checkSeeds = () => {
             if (this.state.seedCount < 1) {
                 // TODO: show message
@@ -320,35 +394,51 @@ export class World extends Scene {
 
         switch (action) {
             case "flower":
-                if (!checkSeeds()) {
-                    return;
-                }
+                // if (!checkSeeds()) {
+                //     return;
+                // }
 
                 this.flowerCells.forEach(cell => {
-                    cell.visible = true;
+                    cell.visible = !Boolean(cell.content);
+                    if (cell.visible) {
+                        cell.mesh.material = Terrain.materials.valid;
+                    }                    
                 });
 
                 break;
             case "bush":
-                if (!checkSeeds()) {
-                    return;
-                }
-                if (!checkCoins(1)) {
-                    return;
-                }
+                // if (!checkSeeds()) {
+                //     return;
+                // }
+                // if (!checkCoins(1)) {
+                //     return;
+                // }
+                this.bushCells.forEach(cell => {
+                    cell.visible = !Boolean(cell.content);
+                    if (cell.visible) {
+                        cell.mesh.material = Terrain.materials.valid;
+                    }
+                });
                 break;
             case "tree":
-                if (!checkSeeds()) {
-                    return;
-                }
-                if (!checkCoins(2)) {
-                    return;
-                }
+                // if (!checkSeeds()) {
+                //     return;
+                // }
+                // if (!checkCoins(2)) {
+                //     return;
+                // }
                 break;
             case "water":
-                if (!checkCoins(3)) {
-                    return;
-                }
+                // if (!checkCoins(3)) {
+                //     return;
+                // }
+
+                this.waterCells.forEach(cell => {
+                    cell.visible = !Boolean(cell.content);
+                    if (cell.visible) {
+                        cell.mesh.material = Terrain.materials.valid;
+                    }                    
+                });
                 break;
         }        
 
@@ -362,9 +452,15 @@ export class World extends Scene {
             this.selectedCell = null;
         }
         this.cameraControls.freezeYaw = false;
-        switch(this.state.action) {
+        switch (this.state.action) {
             case "flower":
                 this.flowerCells.forEach(cell => cell.visible = false);
+                break;
+            case "bush":
+                this.bushCells.forEach(cell => cell.visible = false);
+                break;
+            case "water":
+                this.waterCells.forEach(cell => cell.visible = false);
                 break;
         }
         this.state.action = "none";
@@ -413,8 +509,10 @@ export class World extends Scene {
                         } else {
                             this.selectedCell.visible = false;
                         }
-                    }                    
-                    cell.visible = true;
+                    }
+                    
+                    cell.visible = !Boolean(cell.content);
+                                   
                     if (cell.checked[this.state.action]) {
                         cell.mesh.material = cell.content ? invalid: selected;
                     } else {

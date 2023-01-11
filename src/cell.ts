@@ -6,6 +6,7 @@ export class Cell extends Object3D {
     public worldPos: Vector3;
     public coords: Vector3;
     public checked: { [key: string]: boolean; } = {};
+    public valid: { [key: string]: boolean; } = {};
 
     public static from(other: Cell) {
         return new Cell(other.mesh, other.worldPos, other.coords);
