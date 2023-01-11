@@ -98,17 +98,17 @@ export class Player extends Object3D {
 
     private async load() {
         const obj = await Loaders.load("assets/spider-body.obj", "assets/spider-body.mtl");
-        const texture = await new TextureLoader().load("assets/spider.png");
+        // const texture = await new TextureLoader().load("assets/spider.png");
         obj.scale.setScalar(.6);        
         // obj.scale.y = 1;
         // obj.traverse(child => child.castShadow = true);
         this._body.add(obj);
         this._body.traverse(c => {
             c.castShadow = true;
-            const mesh = (c as Mesh);
-            if (mesh.isMesh) {
-                (mesh.material as MeshPhongMaterial).map = texture;
-            }
+            // const mesh = (c as Mesh);
+            // if (mesh.isMesh) {
+                // (mesh.material as MeshPhongMaterial).map = texture;
+            // }
         });
     }
 

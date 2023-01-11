@@ -5,6 +5,8 @@ import { Collision } from "./collision";
 import { Loaders } from "./loaders";
 import { IContext, ISeed } from "./types";
 
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
+
 export class SeedTree extends Object3D {
 
     private readonly context: IContext;
@@ -76,10 +78,12 @@ export class SeedTree extends Object3D {
     }
 
     private async load() {
-        const obj = await Loaders.load("assets/tree_small.obj", "assets/tree_small.mtl");
-        obj.scale.setScalar(5);
-        obj.traverse(child => child.castShadow = true);
-        this.add(obj);
+        // const obj = await Loaders.load("assets/tree_small.obj", "assets/tree_small.mtl");
+        const obj = await new GLTFLoader().loadAsync("assets/tree.glb");
+        obj.scene.scale.setScalar(2);
+        obj.scene.position.y = 4;
+        obj.scene.traverse(child => child.castShadow = true);
+        this.add(obj.scene);
     }
 }
 
