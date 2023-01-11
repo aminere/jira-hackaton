@@ -204,7 +204,6 @@ export class World extends Scene {
             this.terrain.faces.forEach(face => {
                 face.children.forEach(c => {
                     const _cell = c as Cell;
-                    _cell.checked["water"] = true;
                     _cell.valid["water"] = !Boolean(_cell.content);
                     this.waterCells.push(_cell);
                 });
@@ -304,8 +303,40 @@ export class World extends Scene {
         this.bushCells = [...this.bushCells, ...cells];
     }
 
-    private updateWaterCells(cell: Cell) {
+    private updateWaterCells(newWater: Cell) {
+        const waterRadius = 8;
+        const { radius, cellResolution } = World.config;
+        const cellSize = radius * 2 / cellResolution;        
 
+        const [normal, right, forward, startPos, currentPos, cellCoords, planeIntersection, lineEnd] = Utils.pool.vec3;
+        normal.copy(newWater.worldPos).normalize();
+        Utils.getBasisFromNormal(normal, right, forward);
+        startPos.copy(newWater.worldPos)
+            .addScaledVector(right, waterRadius)
+            .addScaledVector(forward, waterRadius);             
+        
+        currentPos.copy(startPos);
+        const stepSize = cellSize / 2;
+        const steps = Math.round((waterRadius * 2) / stepSize);
+        const cellPos = new Vector3();
+        for (let i = 0; i <= steps; i++) {
+            for (let j = 0; j <= steps; j++) {
+
+                cellPos.copy(currentPos).normalize().multiplyScalar(radius);
+
+                if (this.getCellCoordsFromSpherePos(cellPos, cellCoords, planeIntersection, lineEnd)) {
+                    const cell = this.terrain.getCell(cellCoords);
+                    const checked = cell.checked["water"];
+                    if (!checked) {                        
+                        cell.checked["water"] = true;
+                        cell.valid["water"] = false;
+                    }
+                }
+
+                currentPos.addScaledVector(right, -stepSize);
+            }
+            currentPos.copy(startPos).addScaledVector(forward, -stepSize * (i + 1));
+        }
     }
 
     private updateTreeCells() {
@@ -434,7 +465,7 @@ export class World extends Scene {
                 // }
 
                 this.waterCells.forEach(cell => {
-                    cell.visible = !Boolean(cell.content);
+                    cell.visible = !Boolean(cell.content) && cell.valid["water"];
                     if (cell.visible) {
                         cell.mesh.material = Terrain.materials.valid;
                     }                    
@@ -504,20 +535,22 @@ export class World extends Scene {
                 if (cell !== this.selectedCell) {
                     const { valid, invalid, selected } = Terrain.materials;
                     if (this.selectedCell) {
-                        if (this.selectedCell.checked[this.state.action]) {
-                            this.selectedCell.mesh.material = this.selectedCell.content ? invalid : valid;
+                        if (this.selectedCell.valid[this.state.action] && !Boolean(this.selectedCell.content)) {
+                            this.selectedCell.visible = true;
+                            this.selectedCell.mesh.material = valid;
                         } else {
                             this.selectedCell.visible = false;
+                            this.selectedCell.mesh.material = invalid;
                         }
                     }
                     
-                    cell.visible = !Boolean(cell.content);
-                                   
-                    if (cell.checked[this.state.action]) {
-                        cell.mesh.material = cell.content ? invalid: selected;
+                    cell.visible = !Boolean(cell.content);                                
+                    if (cell.valid[this.state.action]) {
+                        cell.mesh.material = selected;
                     } else {
                         cell.mesh.material = invalid;
-                    }                
+                    }
+
                     this.selectedCell = cell;
                 }
             }
