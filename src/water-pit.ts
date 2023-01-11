@@ -1,8 +1,11 @@
 import { CylinderGeometry, Mesh, MeshStandardMaterial, Object3D } from "three";
+import { Cell } from "./cell";
 import { IContext } from "./types";
 
 export class WaterPit extends Object3D {
     private readonly context: IContext;
+
+    public cellsPerNeighbor: Map<WaterPit, Cell[]> = new Map();
 
     constructor(context: IContext) {
         super();

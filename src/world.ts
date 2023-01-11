@@ -186,6 +186,14 @@ export class World extends Scene {
         this.add(tree);
         this.trees.push(tree);
         this.updateFlowerCells(cell); // flowers at a radius from trees
+
+        if (cell.parentPits) {
+            // disable other cells that are in the area so that trees are not too close to each other
+            const [pit1, pit2] = cell.parentPits as [WaterPit, WaterPit];
+            pit1.cellsPerNeighbor.get(pit2)?.forEach(c => {
+                c.valid["tree"] = false;
+            });
+        }
     }
 
     private buildWater(cell: Cell) {
@@ -382,6 +390,19 @@ export class World extends Scene {
                                 cell.mesh.material = cell.content ? invalid : valid;                
                                 cell.checked["tree"] = true;
                                 cell.valid["tree"] = true;
+
+                                // update cell per pit info
+                                cell.parentPits = [pit, newPit];
+                                if (!pit.cellsPerNeighbor.has(newPit)) {
+                                    pit.cellsPerNeighbor.set(newPit, [cell]);
+                                } else {
+                                    pit.cellsPerNeighbor.get(newPit)?.push(cell);
+                                }
+                                if (!newPit.cellsPerNeighbor.has(pit)) {
+                                    newPit.cellsPerNeighbor.set(pit, [cell]);
+                                } else {
+                                    newPit.cellsPerNeighbor.get(pit)?.push(cell);
+                                }
                             }
                         }
         
@@ -510,7 +531,7 @@ export class World extends Scene {
                 //     return;
                 // }
                 this.treeCells.forEach(cell => {
-                    cell.visible = !Boolean(cell.content);
+                    cell.visible = !Boolean(cell.content) && cell.valid["tree"];
                     if (cell.visible) {
                         cell.mesh.material = Terrain.materials.valid;
                     }
