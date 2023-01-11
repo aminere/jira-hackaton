@@ -13,10 +13,10 @@ export class Loaders {
     }
 
     public static async load(obj: string, mtl: string) {
-        const materials = await Loaders._mtlLoader.loadAsync(mtl);
+        const materials = await new MTLLoader().loadAsync(mtl);
         materials.preload();
-        Loaders._objLoader.setMaterials(materials);
-        return await Loaders._objLoader.loadAsync(obj) as Object3D;
+        const objLoader = new OBJLoader().setMaterials(materials);
+        return await objLoader.loadAsync(obj) as Object3D;
     }
 }
 

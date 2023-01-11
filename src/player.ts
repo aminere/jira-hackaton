@@ -1,9 +1,10 @@
 
-import { Object3D, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, MeshStandardMaterial, MeshBasicMaterial, Clock, Color } from "three";
+import { Object3D, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, MeshStandardMaterial, MeshBasicMaterial, Clock, Color, MeshPhongMaterial, TextureLoader } from "three";
 import { Arm } from "./arm";
 import { IContext, ISeed } from "./types";
 import { Utils } from "./utils";
 import gsap from "gsap";
+import { Loaders } from "./loaders";
 
 interface IArm {
     arm: Arm;
@@ -74,13 +75,13 @@ export class Player extends Object3D {
         
         this._root.add(this._bodyRoot);
         
-        const color = new Color(.3, .3, .3);
-        const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ color }));
-        mesh.scale.z = 2;
-        const headMesh = new Mesh(new SphereGeometry(.5), new MeshStandardMaterial({ color }));
-        headMesh.position.z = 1;
-        this._body.add(mesh);
-        this._body.add(headMesh);        
+        // const color = new Color(.3, .3, .3);
+        // const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ color }));
+        // mesh.scale.z = 2;
+        // const headMesh = new Mesh(new SphereGeometry(.5), new MeshStandardMaterial({ color }));
+        // headMesh.position.z = 1;
+        // this._body.add(mesh);
+        // this._body.add(headMesh);        
         this._bodyRoot.add(this._body);
         this._body.position.y = 1;
         
@@ -90,9 +91,25 @@ export class Player extends Object3D {
             this.createArm(new Vector3(-armRange1.x, armRange1.y, armRange1.z), new Vector3(-armRange2.x, 0, armRange2.z)),
             this.createArm(new Vector3(armRange1.x, armRange1.y, -armRange1.z), new Vector3(armRange2.x, 0, -armRange2.z)),
             this.createArm(new Vector3(-armRange1.x, armRange1.y, -armRange1.z), new Vector3(-armRange2.x, 0, -armRange2.z))
-        ];
+        ];        
 
-        this._body.traverse(c => c.castShadow = true);
+        this.load();
+    }
+
+    private async load() {
+        const obj = await Loaders.load("assets/spider-body.obj", "assets/spider-body.mtl");
+        const texture = await new TextureLoader().load("assets/spider.png");
+        obj.scale.setScalar(.6);        
+        // obj.scale.y = 1;
+        // obj.traverse(child => child.castShadow = true);
+        this._body.add(obj);
+        this._body.traverse(c => {
+            c.castShadow = true;
+            const mesh = (c as Mesh);
+            if (mesh.isMesh) {
+                (mesh.material as MeshPhongMaterial).map = texture;
+            }
+        });
     }
 
     private createArm(position: Vector3, effectorPosition: Vector3): IArm {
