@@ -24,10 +24,10 @@ export class SeedTree extends Object3D {
         this.load();
         [...Array(3)].forEach(() => this.spawnSeed());        
 
-        const folder = context.debugUI.addFolder("Seed Tree");
-        folder.add(SeedTree.config, 'seedAngularSpeed', 0, 360, 1);
-        folder.add(SeedTree.config, 'radius', 0, 20, .1);
-        folder.add(SeedTree.config, 'seedHeight', 0, 20, .1);        
+        // const folder = context.debugUI.addFolder("Seed Tree");
+        // folder.add(SeedTree.config, 'seedAngularSpeed', 0, 360, 1);
+        // folder.add(SeedTree.config, 'radius', 0, 20, .1);
+        // folder.add(SeedTree.config, 'seedHeight', 0, 20, .1);        
     }
 
     public spawnSeed() {        

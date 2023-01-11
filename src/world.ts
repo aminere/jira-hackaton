@@ -51,6 +51,7 @@ export class World extends Scene {
     private flowerCells: Cell[] = [];
     private bushCells: Cell[] = [];
     private waterCells: Cell[] = [];
+    private treeCells: Cell[] = [];
 
     private state: IState = {
         seedCount: 0,
@@ -150,8 +151,6 @@ export class World extends Scene {
     }
 
     private buildFlower(cell: Cell) { 
-        const [normal] = Utils.pool.vec3;
-        normal.copy(cell.worldPos).normalize();                
         const flower = new Object3D();        
         flower.position.copy(cell.worldPos);
         this.castOnSphere(flower);
@@ -165,9 +164,7 @@ export class World extends Scene {
         cell.mesh.material = Terrain.materials.invalid;
     }
 
-    private buildBush(cell: Cell) {        
-        const [normal] = Utils.pool.vec3;
-        normal.copy(cell.worldPos).normalize();                
+    private buildBush(cell: Cell) {
         const bush = new Object3D();        
         bush.position.copy(cell.worldPos);
         this.castOnSphere(bush);
@@ -214,7 +211,7 @@ export class World extends Scene {
 
         this.updateBushCells(cell); // bushes at a radius from water
         this.updateWaterCells(cell); // water cells at a radius from each other
-        this.updateTreeCells(); // trees in between water cells
+        this.updateTreeCells(cell); // trees in between water cells
     }
     
     private updateFlowerCells(newTree: Cell) {
@@ -313,7 +310,7 @@ export class World extends Scene {
         Utils.getBasisFromNormal(normal, right, forward);
         startPos.copy(newWater.worldPos)
             .addScaledVector(right, waterRadius)
-            .addScaledVector(forward, waterRadius);             
+            .addScaledVector(forward, waterRadius);
         
         currentPos.copy(startPos);
         const stepSize = cellSize / 2;
@@ -339,8 +336,63 @@ export class World extends Scene {
         }
     }
 
-    private updateTreeCells() {
+    private updateTreeCells(newWater: Cell) {
+        if (this.waterPits.length < 2) {
+            return; // trees require at least 2 water pits
+        }
 
+        const { radius, cellResolution } = World.config;
+        const cellSize = radius * 2 / cellResolution;
+        const maxAngleBetweenNeighbors = 30;
+        const waterRadius = 2;
+
+        const [pit1Pos, pit2Pos, average, normal, right, forward, startPos, currentPos, cellCoords, planeIntersection, lineEnd] = Utils.pool.vec3;
+        const newPit = newWater.content as WaterPit;
+        const cellPos = new Vector3(); 
+        const cells: Cell[] = [];       
+        const { valid, invalid } = Terrain.materials;
+        this.waterPits.forEach(pit => {
+            if (pit === newPit) {
+                return;
+            }
+            
+            const angle = Math.acos(pit1Pos.copy(pit.position).normalize().dot(pit2Pos.copy(newPit.position).normalize())) * MathUtils.RAD2DEG;
+            if (angle < maxAngleBetweenNeighbors) {
+                normal.lerpVectors(pit1Pos, pit2Pos, 0.5).normalize();
+                average.copy(normal).multiplyScalar(radius);               
+
+                Utils.getBasisFromNormal(normal, right, forward);
+                startPos.copy(average)
+                    .addScaledVector(right, waterRadius)
+                    .addScaledVector(forward, waterRadius);
+                
+                currentPos.copy(startPos);
+                const stepSize = cellSize / 2;
+                const steps = Math.round((waterRadius * 2) / stepSize);
+                for (let i = 0; i <= steps; i++) {
+                    for (let j = 0; j <= steps; j++) {
+        
+                        cellPos.copy(currentPos).normalize().multiplyScalar(radius);
+        
+                        if (this.getCellCoordsFromSpherePos(cellPos, cellCoords, planeIntersection, lineEnd)) {
+                            const cell = this.terrain.getCell(cellCoords);
+                            const checked = cell.checked["tree"];
+                            if (!checked) {        
+                                cells.push(cell);
+                                cell.mesh.material = cell.content ? invalid : valid;                
+                                cell.checked["tree"] = true;
+                                cell.valid["tree"] = true;
+                            }
+                        }
+        
+                        currentPos.addScaledVector(right, -stepSize);
+                    }
+                    currentPos.copy(startPos).addScaledVector(forward, -stepSize * (i + 1));
+                }
+            }
+        });
+
+        this.treeCells = [...this.treeCells, ...cells];
     }
 
     public dispose() {
@@ -371,7 +423,6 @@ export class World extends Scene {
 
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
-            
 
             if (this.selectedCell) {
                 const canPlant = !this.selectedCell.content && this.selectedCell.valid[this.state.action];
@@ -458,6 +509,12 @@ export class World extends Scene {
                 // if (!checkCoins(2)) {
                 //     return;
                 // }
+                this.treeCells.forEach(cell => {
+                    cell.visible = !Boolean(cell.content);
+                    if (cell.visible) {
+                        cell.mesh.material = Terrain.materials.valid;
+                    }
+                });
                 break;
             case "water":
                 // if (!checkCoins(3)) {
@@ -492,6 +549,9 @@ export class World extends Scene {
                 break;
             case "water":
                 this.waterCells.forEach(cell => cell.visible = false);
+                break;
+            case "tree":
+                this.treeCells.forEach(cell => cell.visible = false);
                 break;
         }
         this.state.action = "none";
