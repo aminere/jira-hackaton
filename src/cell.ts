@@ -1,4 +1,4 @@
-import { Material, Mesh, Object3D, Vector3 } from "three";
+import { Mesh, Object3D, Vector3 } from "three";
 
 export class Cell extends Object3D {
     public content: Object3D | null = null;

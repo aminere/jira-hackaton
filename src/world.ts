@@ -7,10 +7,10 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { BoxGeometry, Color, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Plane, Scene, SphereGeometry, TubeGeometry, Vector2, Vector3 } from "three";
+import { BoxGeometry, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, Object3D, Plane, Scene, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
-import { IContext, ISeed } from './types';
+import { IContext } from './types';
 import { SeedTree } from './seed-tree';
 import { Collision } from './collision';
 import { Utils } from './utils';
@@ -179,7 +179,7 @@ export class World extends Scene {
     }
 
     private buildTree(cell: Cell) {
-        const tree = new SeedTree(this.context);
+        const tree = new SeedTree();
         tree.position.copy(cell.worldPos);
         this.castOnSphere(tree);
         cell.content = tree;
@@ -197,7 +197,7 @@ export class World extends Scene {
     }
 
     private buildWater(cell: Cell) {
-        const waterPit = new WaterPit(this.context);
+        const waterPit = new WaterPit();
         waterPit.position.copy(cell.worldPos);
         this.castOnSphere(waterPit);
         cell.content = waterPit;
@@ -477,23 +477,23 @@ export class World extends Scene {
 
         this.exitBuildMode();
 
-        const checkSeeds = () => {
-            if (this.state.seedCount < 1) {
-                // TODO: show message
-                console.log("not enough seeds");
-                return false;
-           }
-           return true;
-        };
+        // const checkSeeds = () => {
+        //     if (this.state.seedCount < 1) {
+        //         // TODO: show message
+        //         console.log("not enough seeds");
+        //         return false;
+        //    }
+        //    return true;
+        // };
 
-        const checkCoins = (count: number) => {
-            if (this.state.coins < count) {
-                // TODO: show message
-                console.log("not enough coins");
-                return false;
-           }
-           return true;
-        };
+        // const checkCoins = (count: number) => {
+        //     if (this.state.coins < count) {
+        //         // TODO: show message
+        //         console.log("not enough coins");
+        //         return false;
+        //    }
+        //    return true;
+        // };
 
         switch (action) {
             case "flower":
@@ -764,7 +764,7 @@ export class World extends Scene {
 
         this.player.update(deltaTime);
         this.trees.forEach(t => t.update(deltaTime));
-        this.hud.update(deltaTime);
+        this.hud.update();
     }
 
     private onKeyDown(event: KeyboardEvent) {  

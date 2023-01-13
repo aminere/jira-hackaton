@@ -2,8 +2,7 @@
 import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, TextureLoader, Vector3, FrontSide, MeshBasicMaterial, Color } from "three";
 import { Collision } from "./collision";
 
-import { Loaders } from "./loaders";
-import { IContext, ISeed } from "./types";
+import { ISeed } from "./types";
 
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 
@@ -12,7 +11,7 @@ import vert from './tree-vertex.glsl.js';
 
 export class SeedTree extends Object3D {
 
-    private readonly context: IContext;
+    // private readonly context: IContext;
 
     private readonly seeds: ISeed[] = [];
 
@@ -24,9 +23,9 @@ export class SeedTree extends Object3D {
         seedHeight: 3
     };
 
-    constructor(context: IContext) {
+    constructor() {
         super();
-        this.context = context;
+        // this.context = context;
         
         this.load();
         [...Array(3)].forEach(() => this.spawnSeed());        
@@ -126,19 +125,6 @@ export class SeedTree extends Object3D {
 
         this.add(trunk);
         this.add(foliage);
-
-    //     <CustomShaderMaterial
-    //     alphaMap={alphaMap}
-    //     alphaTest={0.5}
-    //     baseMaterial={MeshStandardMaterial}
-    //     color={new Color('#3f6d21').convertLinearToSRGB()}
-    //     ref={ref}
-    //     uniforms={uniforms}
-    //     vertexShader={vert}
-    //     shadowSide={FrontSide}
-    //   />
-
-        // this.add(obj.scene);
     }
 }
 

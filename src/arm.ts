@@ -1,4 +1,4 @@
-import { BoxGeometry, Euler, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Quaternion, SphereGeometry, Vector3 } from "three";
+import { BoxGeometry, MathUtils, Mesh, MeshStandardMaterial, Object3D, SphereGeometry } from "three";
 import { Utils } from "./utils";
 
 export class Arm extends Object3D {

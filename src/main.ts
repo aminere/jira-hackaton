@@ -2,7 +2,6 @@
 import * as THREE from 'three';
 import { World } from './world';
 import { GUI } from 'dat.gui';
-import { Loaders } from './loaders';
 import { Fonts } from './Fonts';
 
 const renderer = new THREE.WebGLRenderer({
@@ -19,7 +18,6 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 Fonts.preload()
   .then(() => (document.getElementById("ui") as HTMLElement).style.display = "block");
   
-Loaders.init();
 const camera = new THREE.PerspectiveCamera(80, 1, .1, 100);
 const debugUI = new GUI();
 const clock = new THREE.Clock();

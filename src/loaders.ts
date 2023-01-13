@@ -2,15 +2,7 @@ import { Object3D } from "three";
 import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 
-export class Loaders {
-
-    private static _objLoader: OBJLoader;
-    private static _mtlLoader: MTLLoader;
-
-    public static init() {
-        Loaders._objLoader = new OBJLoader();
-        Loaders._mtlLoader = new MTLLoader();
-    }
+export class Loaders {    
 
     public static async load(obj: string, mtl: string) {
         const materials = await new MTLLoader().loadAsync(mtl);

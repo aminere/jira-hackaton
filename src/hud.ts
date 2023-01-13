@@ -31,7 +31,7 @@ export class HUD {
         this.markers.push({ target, name });
     }
 
-    public update(deltaTime: number) {        
+    public update() {        
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         const [worldPos] = Utils.pool.vec3;

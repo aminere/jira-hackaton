@@ -1,5 +1,5 @@
 
-import { Object3D, Mesh, BoxGeometry, SphereGeometry, Vector3, Matrix4, MathUtils, MeshStandardMaterial, MeshBasicMaterial, Clock, Color, MeshPhongMaterial, TextureLoader } from "three";
+import { Object3D, Mesh, SphereGeometry, Vector3, MathUtils, MeshBasicMaterial, Clock } from "three";
 import { Arm } from "./arm";
 import { IContext, ISeed } from "./types";
 import { Utils } from "./utils";
@@ -223,7 +223,7 @@ export class Player extends Object3D {
             );
     }
 
-    public grabWater(waterPit: Object3D) {
+    public grabWater() {
         this.waterBucket = new Mesh(new SphereGeometry(.5), new MeshBasicMaterial({ color: 0x0000ff }));
         this.waterBucket.position.y = 2;
         this._body.add(this.waterBucket);

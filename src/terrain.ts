@@ -1,6 +1,6 @@
 
 import * as THREE from 'three';
-import { BoxGeometry, BufferAttribute, CubeTexture, Mesh, MeshBasicMaterial, MeshStandardMaterial, MeshToonMaterial, Object3D, SphereGeometry, Vector2, Vector3 } from 'three';
+import { BoxGeometry, CubeTexture, Mesh, MeshBasicMaterial, Object3D, Vector3 } from 'three';
 import { Cell } from './cell';
 import { PerlinNoise } from './perlin-noise';
 import { Utils } from './utils';
