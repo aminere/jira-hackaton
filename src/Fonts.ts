@@ -37,7 +37,7 @@ export class Fonts {
         };
 
         return Promise.all([
-            loadFont("Libre Baskerville", "normal", "normal", "/fonts/LibreBaskerville-Regular.ttf")
+            loadFont("Libre Baskerville", "normal", "normal", "fonts/LibreBaskerville-Regular.ttf")
         ]);
     }
 }
