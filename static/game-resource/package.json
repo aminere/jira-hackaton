@@ -1,0 +1,44 @@
+{
+    "name": "devs-unleashed-game-resource",
+    "version": "0.1.5",
+    "private": true,
+    "homepage": ".",
+    "dependencies": {
+        "@forge/bridge": "^2.5.0",
+        "@forge/jira-bridge": "^0.10.0",
+        "phaser": "^3.55.2"
+    },
+    "devDependencies": {
+        "@types/dat.gui": "^0.7.7",
+        "@types/three": "^0.148.0",
+        "dat.gui": "^0.7.9",
+        "gsap": "^3.11.4",
+        "parcel": "^2.8.1",
+        "three": "^0.148.0",
+        "three-custom-shader-material": "^5.1.2",
+        "typescript": "^4.9.4",
+        "vite": "^4.0.4"
+    },
+    "scripts": {
+        "start": "PARCEL_WORKERS=0 parcel watch dist/index.html --no-hmr --no-cache",        
+        "build": "rm -rf dist && tsc && vite build",
+        "dev": "vite"
+    },
+    "targets": {
+        "default": {
+            "publicUrl": "./"
+        }
+    },
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
+    }
+}
