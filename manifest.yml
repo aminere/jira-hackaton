@@ -1,0 +1,64 @@
+modules:
+  jira:issueAction:
+    - key: devs-unleashed-forge-jira-issue-action
+      resource: gameResource
+      resolver:
+        function: resolver
+      title: Devs unleashed Jira issue action
+      viewportSize: large
+  jira:dashboardGadget:
+    - key: devs-unleashed-forge-jira-dashboard-gadget
+      thumbnail: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      resource: gameResource
+      resolver:
+        function: resolver
+      title: Devs unleashed Jira dashboard gadget
+      description: Dashboard with game
+  jira:globalPage:
+    - key: devs-unleashed-forge-jira-global-page
+      resource: gameResource
+      resolver:
+        function: resolver
+      title: Devs unleashed Jira global page
+  confluence:homepageFeed:
+    - key: devs-unleashed-forge-confluence-homepage-feed
+      resource: gameResource
+      resolver:
+        function: resolver
+      title: Devs unleashed Confluence homepage feed
+      viewportSize: large
+  macro:
+    - key: devs-unleashed-forge-confluence-macro
+      resource: gameResource
+      resolver:
+        function: resolver
+      title: Devs unleashed Confluence macro
+      viewportSize: large
+  confluence:globalPage:
+    - key: devs-unleashed-forge-confluence-global-page
+      resource: gameResource
+      resolver:
+        function: resolver
+      title: Devs unleashed Confluence global page
+      route: devs-unleashed-forge-confluence-global-page
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: gameResource
+    path: static/game-resource/dist
+permissions:
+  scopes:
+    - read:jira-work
+    - read:confluence-space.summary
+  content:
+    scripts:
+      - unsafe-eval
+  external:
+    fetch:
+      client:
+        - '*.atlassian.com'
+        - '*.atlassian.net'
+        - '*.atl-paas.net'
+app:
+  id: ari:cloud:ecosystem::app/5300b83b-8258-42cc-9e8a-ed4ae3969a5c
