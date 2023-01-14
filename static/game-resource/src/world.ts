@@ -22,6 +22,8 @@ import type { Cell } from './cell';
 
 type Action = "flower" | "bush" | "tree" | "water" | "none";
 
+type SerializedWorld = Array<{ type: string; coords: Vector3 }>;
+
 interface IState {
     seedCount: number;
     coins: number;
@@ -52,6 +54,9 @@ export class World extends Scene {
     private bushCells: Cell[] = [];
     private waterCells: Cell[] = [];
     private treeCells: Cell[] = [];
+
+    private serializedWorld: SerializedWorld = [];
+    private saveToLocalStorage = true;
 
     private state: IState = {
         seedCount: 0,
@@ -115,8 +120,23 @@ export class World extends Scene {
 
         this.addSky(this.player, context.debugUI);
 
-        this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution / 2 - 1, 4)));
-        this.buildWater(this.terrain.getCell(new Vector3(0, cellResolution / 2 + 2, 4)))
+        this.serializedWorld = JSON.parse(localStorage.getItem("map") ?? `[
+            { "type": "tree", "coords": { "x": 0, "y": 5, "z": 4 } },
+            { "type": "water", "coords": { "x": 0, "y": 8, "z": 4 } }
+        ]`) as SerializedWorld;
+
+        this.saveToLocalStorage = false;
+        this.serializedWorld.forEach(({ type, coords }) => {
+            switch (type) {
+                case "tree": this.buildTree(this.terrain.getCell(coords)); break;
+                case "water": this.buildWater(this.terrain.getCell(coords)); break;
+            }
+        });
+        this.saveToLocalStorage = true;
+
+        // cellResolution = 12
+        // this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution / 2 - 1, 4)));
+        // this.buildWater(this.terrain.getCell(new Vector3(0, cellResolution / 2 + 2, 4)))
         // this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution - 1, 4)));
 
         this.load();
@@ -135,10 +155,10 @@ export class World extends Scene {
         this.hud = new HUD(hudCanvas, context);
         // this.hud.addMarker(tree, "Seed Tree");
 
-        const buildFlower = document.getElementById("buildFlower") as HTMLButtonElement;
-        buildFlower.onclick = () => this.enterBuildMode("flower");
-        const buildBush = document.getElementById("buildBush") as HTMLButtonElement;
-        buildBush.onclick = () => this.enterBuildMode("bush");
+        // const buildFlower = document.getElementById("buildFlower") as HTMLButtonElement;
+        // buildFlower.onclick = () => this.enterBuildMode("flower");
+        // const buildBush = document.getElementById("buildBush") as HTMLButtonElement;
+        // buildBush.onclick = () => this.enterBuildMode("bush");
         const buildTree = document.getElementById("buildTree") as HTMLButtonElement;
         buildTree.onclick = () => this.enterBuildMode("tree");
         const buildWater = document.getElementById("buildWater") as HTMLButtonElement;
@@ -161,7 +181,7 @@ export class World extends Scene {
         this.add(flower);
         this.flowers.push(flower);                    
         this.state.seedCount--;
-        cell.mesh.material = Terrain.materials.invalid;
+        cell.mesh.material = Terrain.materials.invalid;        
     }
 
     private buildBush(cell: Cell) {
@@ -194,6 +214,11 @@ export class World extends Scene {
                 c.valid["tree"] = false;
             });
         }
+
+        if (this.saveToLocalStorage) {
+            this.serializedWorld.push({ type: "tree", coords: cell.coords });
+            localStorage.setItem("map", JSON.stringify(this.serializedWorld));
+        }
     }
 
     private buildWater(cell: Cell) {
@@ -220,6 +245,11 @@ export class World extends Scene {
         this.updateBushCells(cell); // bushes at a radius from water
         this.updateWaterCells(cell); // water cells at a radius from each other
         this.updateTreeCells(cell); // trees in between water cells
+
+        if (this.saveToLocalStorage) {
+            this.serializedWorld.push({ type: "water", coords: cell.coords });
+            localStorage.setItem("map", JSON.stringify(this.serializedWorld));
+        }
     }
     
     private updateFlowerCells(newTree: Cell) {

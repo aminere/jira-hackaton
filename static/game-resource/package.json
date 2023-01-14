@@ -5,8 +5,7 @@
     "homepage": ".",
     "dependencies": {
         "@forge/bridge": "^2.5.0",
-        "@forge/jira-bridge": "^0.10.0",
-        "phaser": "^3.55.2"
+        "@forge/jira-bridge": "^0.10.0"
     },
     "devDependencies": {
         "@types/dat.gui": "^0.7.7",
@@ -20,7 +19,7 @@
         "vite": "^4.0.4"
     },
     "scripts": {
-        "start": "PARCEL_WORKERS=0 parcel watch dist/index.html --no-hmr --no-cache",        
+        "start": "PARCEL_WORKERS=0 parcel watch dist/index.html --no-hmr --no-cache",
         "build": "rm -rf dist && tsc && vite build",
         "dev": "vite"
     },

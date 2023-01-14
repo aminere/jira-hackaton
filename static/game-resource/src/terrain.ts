@@ -27,7 +27,7 @@ export class Terrain extends THREE.Mesh {
     }
 
     public constructor(props: ITerrainOptions) {        
-       const makeTexture = (face: number) => {
+       /*const makeTexture = (face: number) => {
             const bpp = 4;
             const dimension = 256;
             const size = dimension * dimension;
@@ -56,7 +56,7 @@ export class Terrain extends THREE.Mesh {
             return texture;
         };
         const cubeMap = new CubeTexture([...Array(6)].map((_, i) => makeTexture(i)));
-        cubeMap.needsUpdate = true;
+        cubeMap.needsUpdate = true;*/
 
         const material = new THREE.MeshPhongMaterial({ 
             color: 0xffffff, 
@@ -109,7 +109,7 @@ export class Terrain extends THREE.Mesh {
         const colors = new Float32Array(_vertices.count * 3);
         for (let i = 0; i < _vertices.count; i++) { 
             const noise = PerlinNoise.get2DNoise(i, i, 20, 8); 
-            colors[i * 3 + 0] = .5;
+            colors[i * 3 + 0] = .3;
             colors[i * 3 + 1] = noise; // Math.max(Math.random(), 0.5);
             colors[i * 3 + 2] = 0;
         }

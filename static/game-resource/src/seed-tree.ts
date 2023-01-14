@@ -1,5 +1,5 @@
 
-import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, TextureLoader, Vector3, FrontSide, MeshBasicMaterial, Color } from "three";
+import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, TextureLoader, Vector3, FrontSide, MeshBasicMaterial, Color, Group } from "three";
 import { Collision } from "./collision";
 
 import { ISeed } from "./types";
@@ -28,7 +28,7 @@ export class SeedTree extends Object3D {
         // this.context = context;
         
         this.load();
-        [...Array(3)].forEach(() => this.spawnSeed());        
+        // [...Array(3)].forEach(() => this.spawnSeed());        
 
         // const folder = context.debugUI.addFolder("Seed Tree");
         // folder.add(SeedTree.config, 'seedAngularSpeed', 0, 360, 1);
@@ -87,19 +87,14 @@ export class SeedTree extends Object3D {
     }
 
     private async load() {
-        // const obj = await Loaders.load("assets/tree_small.obj", "assets/tree_small.mtl");
-        const obj = await new GLTFLoader().loadAsync("assets/tree.glb");
-        
-        obj.scene.scale.setScalar(2);
-        // obj.scene.position.y = 4;
-        // obj.scene.traverse(child => child.castShadow = true);
+        const obj = await new GLTFLoader().loadAsync("assets/tree.glb");        
 
         const alphaMap = await new TextureLoader().load("assets/foliage_alpha3.png");
         const foliageMaterial = new CustomShaderMaterial({
             alphaMap,
             alphaTest: 0.5,
             baseMaterial: MeshStandardMaterial,
-            color: new Color('#3f6d21').convertLinearToSRGB(),
+            color: new Color('#596B1E').convertLinearToSRGB(),
             uniforms: {
                 u_effectBlend: { value: 1.0 },
                 u_inflate: { value: 0.0 },
@@ -123,8 +118,10 @@ export class SeedTree extends Object3D {
         foliage.material = foliageMaterial;
         this.foliageMaterial = foliageMaterial;
 
-        this.add(trunk);
-        this.add(foliage);
+        const group = new Group();
+        group.scale.setScalar(1.4);
+        group.add(trunk, foliage);
+        this.add(group);
     }
 }
 
