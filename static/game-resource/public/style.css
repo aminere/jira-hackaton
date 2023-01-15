@@ -67,10 +67,10 @@ button:active {
 
 #ui {
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
-    display: none;
-    flex-direction: row;
+    width: 100%;
+    height: 100%;    
     padding: 2vmin;
     gap: 2vmin;
     pointer-events: none;
@@ -117,15 +117,19 @@ button:active {
     }
 }
 
-#task-panel {
-    position: relative;
+#task-panel {    
     border-radius: 2vmin;
     background-color: #3131315d;
     color: white;
-    width: 80vmin;
-    height: 80vmin;
+    width: 70vmin;
+    height: 70vmin;
     pointer-events: all;
     padding: 2vmin;
+
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
 }
 
 #task-loading {

@@ -1046,7 +1046,7 @@ export class World extends Scene {
 
         this.player.update(deltaTime);
         this.trees.forEach(t => {
-            t.update(deltaTime);            
+            t.update();
         });
         // this.hud.update();
     }

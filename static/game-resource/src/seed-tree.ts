@@ -1,14 +1,15 @@
 
-import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, TextureLoader, Vector3, FrontSide, MeshBasicMaterial, Color, Group } from "three";
+import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, TextureLoader, Vector3, FrontSide, MeshBasicMaterial, Color, Group, MeshPhongMaterial } from "three";
 import { Collision } from "./collision";
 
 import { IContext, ISeed } from "./types";
 
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
+// import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
+// import vert from './tree-vertex.glsl.js';
+// import  CustomShaderMaterial from "three-custom-shader-material/vanilla";
 
-import  CustomShaderMaterial from "three-custom-shader-material/vanilla";
-import vert from './tree-vertex.glsl.js';
 import { Utils } from "./utils";
+import { Loaders } from "./loaders";
 
 export class SeedTree extends Object3D {
 
@@ -16,7 +17,7 @@ export class SeedTree extends Object3D {
 
     private readonly seeds: ISeed[] = [];
 
-    private foliageMaterial!: CustomShaderMaterial;
+    // private foliageMaterial!: CustomShaderMaterial;
 
     private container!: HTMLElement;
     public icon!: HTMLElement;
@@ -67,17 +68,17 @@ export class SeedTree extends Object3D {
         seed.object.removeFromParent();
     }
 
-    public update(deltaTime: number) {
+    public update() {
         /*const { seedAngularSpeed } = SeedTree.config;
         this.seeds.forEach(seed => {
             seed.angle += deltaTime * seedAngularSpeed;
             this.updateSeedPosition(seed);
         });*/
 
-        const windTime = this.foliageMaterial?.uniforms?.u_windTime;
-        if (windTime) {
-            windTime.value += this.foliageMaterial.uniforms.u_windSpeed.value * deltaTime;
-        }
+        // const windTime = this.foliageMaterial?.uniforms?.u_windTime;
+        // if (windTime) {
+        //     windTime.value += this.foliageMaterial.uniforms.u_windSpeed.value * deltaTime;
+        // }
 
         // update HUD
         const [worldPos, screenPos, normalizedPos] = Utils.pool.vec3;
@@ -120,8 +121,20 @@ export class SeedTree extends Object3D {
     }
 
     private async load() {
-        const obj = await new GLTFLoader().loadAsync("assets/tree.glb");        
 
+        const texture = await new TextureLoader().loadAsync("assets/tree-texture.png");
+        const obj2 = await Loaders.load("assets/Tree_01.obj", "assets/Tree_01.mtl");        
+        this.add(obj2);        
+
+        obj2.traverse(c => {
+            c.castShadow = true;
+            if ((c as Mesh).isMesh) {
+                const mesh = c as Mesh;
+                (mesh.material as MeshPhongMaterial).map = texture;
+            }
+        });
+
+        /*const obj = await new GLTFLoader().loadAsync("assets/tree.glb");
         const alphaMap = await new TextureLoader().load("assets/foliage_alpha3.png");
         const foliageMaterial = new CustomShaderMaterial({
             alphaMap,
@@ -138,23 +151,19 @@ export class SeedTree extends Object3D {
             vertexShader: vert,
             shadowSide: FrontSide
         });
-
         const trunk = obj.scene.children.filter(c => c.name === "trunk")?.[0].clone() as Mesh;
         const foliage = obj.scene.children.filter(c => c.name === "foliage")?.[0].clone() as Mesh;
-
         trunk.receiveShadow = true;
         trunk.castShadow = true;
         trunk.material = new MeshBasicMaterial({ color: 0x733331 });
-
         foliage.receiveShadow = true;
         foliage.castShadow = true;
         foliage.material = foliageMaterial;
         this.foliageMaterial = foliageMaterial;
-
         const group = new Group();
         group.scale.setScalar(1.4);
         group.add(trunk, foliage);
-        this.add(group);
+        this.add(group);*/
     }
 }
 

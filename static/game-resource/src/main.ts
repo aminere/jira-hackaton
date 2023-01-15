@@ -91,7 +91,7 @@ Fonts.preload()
     "ui/close.svg"
   ]))
   .then(() => forgeInit())
-  .then(() => (document.getElementById("ui") as HTMLElement).style.display = "flex");
+  .then(() => (document.getElementById("ui") as HTMLElement).classList.remove("hidden"));
 
 const camera = new THREE.PerspectiveCamera(80, 1, .1, 100);
 const debugUI = new GUI();
