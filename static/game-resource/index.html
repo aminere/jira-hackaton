@@ -14,6 +14,30 @@
     <canvas id="game"></canvas>
     <canvas id="hud"></canvas>
     <div id="ui" style="display: none;">
+      <button id="jira-logo" type="button">
+        <img src="ui/jira-logo.png" />
+      </button>
+      <div id="task-panel" class="hidden">
+        <!-- <div id="task-loading">
+          <div class="loader"></div>
+          <div>Loading Project Data</div>
+        </div> -->
+        <div class="tasks">
+          <div class="tasks-bar">
+            <div>
+              <span>Project</span>
+              <select id="project-selector">
+                <option value="0">All</option>
+                <option value="1">Dummy Project</option>
+              </select>
+            </div>
+            <img src="ui/refresh.png" />
+          </div>
+          <div id="task-list">
+            <div class="task"></div>
+          </div>
+        </div>
+      </div>
       <!-- <div class="counters">
         <div class="counter">
           <img src="ui/seed.svg" />

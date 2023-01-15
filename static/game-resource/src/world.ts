@@ -155,6 +155,12 @@ export class World extends Scene {
         this.hud = new HUD(hudCanvas, context);
         // this.hud.addMarker(tree, "Seed Tree");
 
+        (document.getElementById("jira-logo") as HTMLButtonElement).onclick = () => this.openTasksPanel();
+
+        (document.getElementById("project-selector") as HTMLSelectElement).onchange = (e) => {
+            console.log((e.target as any).value);
+        };
+
         // const buildFlower = document.getElementById("buildFlower") as HTMLButtonElement;
         // buildFlower.onclick = () => this.enterBuildMode("flower");
         // const buildBush = document.getElementById("buildBush") as HTMLButtonElement;
@@ -163,6 +169,17 @@ export class World extends Scene {
         // buildTree.onclick = () => this.enterBuildMode("tree");
         // const buildWater = document.getElementById("buildWater") as HTMLButtonElement;
         // buildWater.onclick =() => this.enterBuildMode("water");
+    }
+
+    private openTasksPanel() {
+        const panel = (document.getElementById("task-panel") as HTMLElement);
+        if (panel.classList.contains("visible")) {
+            panel.classList.replace("visible", "hidden");
+        } else {
+            panel.classList.replace("hidden", "visible");
+        }
+
+
     }
 
     private castOnSphere(object: Object3D) {
