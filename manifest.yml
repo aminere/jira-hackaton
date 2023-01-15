@@ -1,46 +1,10 @@
-modules:
-  jira:issueAction:
-    - key: devs-unleashed-forge-jira-issue-action
-      resource: gameResource
-      resolver:
-        function: resolver
-      title: Devs unleashed Jira issue action
-      viewportSize: large
-  jira:dashboardGadget:
-    - key: devs-unleashed-forge-jira-dashboard-gadget
-      thumbnail: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
-      resource: gameResource
-      resolver:
-        function: resolver
-      title: Devs unleashed Jira dashboard gadget
-      description: Dashboard with game
+modules:  
   jira:globalPage:
-    - key: devs-unleashed-forge-jira-global-page
+    - key: plant-seeds-devs-unleashed-hackaton
       resource: gameResource
       resolver:
         function: resolver
-      title: Devs unleashed Jira global page
-  confluence:homepageFeed:
-    - key: devs-unleashed-forge-confluence-homepage-feed
-      resource: gameResource
-      resolver:
-        function: resolver
-      title: Devs unleashed Confluence homepage feed
-      viewportSize: large
-  macro:
-    - key: devs-unleashed-forge-confluence-macro
-      resource: gameResource
-      resolver:
-        function: resolver
-      title: Devs unleashed Confluence macro
-      viewportSize: large
-  confluence:globalPage:
-    - key: devs-unleashed-forge-confluence-global-page
-      resource: gameResource
-      resolver:
-        function: resolver
-      title: Devs unleashed Confluence global page
-      route: devs-unleashed-forge-confluence-global-page
+      title: Plant Seeds! (devs-unleashed-hackaton)  
   function:
     - key: resolver
       handler: index.handler
@@ -50,7 +14,6 @@ resources:
 permissions:
   scopes:
     - read:jira-work
-    - read:confluence-space.summary
   content:
     scripts:
       - unsafe-eval
