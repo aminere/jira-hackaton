@@ -120,10 +120,10 @@ export class World extends Scene {
 
         this.addSky(this.player, context.debugUI);
 
-        this.serializedWorld = JSON.parse(localStorage.getItem("map") ?? `[
+        this.serializedWorld = []; /*JSON.parse(localStorage.getItem("map") ?? `[
             { "type": "tree", "coords": { "x": 0, "y": 5, "z": 4 } },
             { "type": "water", "coords": { "x": 0, "y": 8, "z": 4 } }
-        ]`) as SerializedWorld;
+        ]`) as SerializedWorld;*/
 
         this.saveToLocalStorage = false;
         this.serializedWorld.forEach(({ type, coords }) => {
@@ -159,10 +159,10 @@ export class World extends Scene {
         // buildFlower.onclick = () => this.enterBuildMode("flower");
         // const buildBush = document.getElementById("buildBush") as HTMLButtonElement;
         // buildBush.onclick = () => this.enterBuildMode("bush");
-        const buildTree = document.getElementById("buildTree") as HTMLButtonElement;
-        buildTree.onclick = () => this.enterBuildMode("tree");
-        const buildWater = document.getElementById("buildWater") as HTMLButtonElement;
-        buildWater.onclick =() => this.enterBuildMode("water");
+        // const buildTree = document.getElementById("buildTree") as HTMLButtonElement;
+        // buildTree.onclick = () => this.enterBuildMode("tree");
+        // const buildWater = document.getElementById("buildWater") as HTMLButtonElement;
+        // buildWater.onclick =() => this.enterBuildMode("water");
     }
 
     private castOnSphere(object: Object3D) {
