@@ -1,6 +1,5 @@
-import { Object3D, Vector3 } from "three";
-import { IContext } from "./types";
-import { Utils } from "./utils";
+import { Object3D } from "three";
+// import { IContext } from "./types";
 
 interface IMarker {
     target: Object3D;
@@ -11,13 +10,13 @@ export class HUD {
 
     private canvas: HTMLCanvasElement;
     private ctx!: CanvasRenderingContext2D;
-    private context: IContext;
+    // private context: IContext;
 
     private markers: IMarker[] = [];
 
-    constructor(canvas: HTMLCanvasElement, context: IContext) {
+    constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;        
-        this.context = context;
+        // this.context = context;
         this.initContext();      
     }
 

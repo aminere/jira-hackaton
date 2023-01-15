@@ -10,11 +10,11 @@ import { Player } from './player';
 import { BoxGeometry, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, Object3D, Plane, Scene, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
-import { IContext } from './types';
+import { IContext, ITask } from './types';
 import { SeedTree } from './seed-tree';
 import { Collision } from './collision';
 import { Utils } from './utils';
-import { WaterPit } from './water-pit';
+// import { WaterPit } from './water-pit';
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import type { Cell } from './cell';
@@ -28,15 +28,6 @@ interface IState {
     keys: Map<string, boolean>;
 }
 
-interface ITask {
-    key: string;
-    summary: string;
-    status: string;
-
-    type: string; 
-    coords: Vector3;
-}
-
 export class World extends Scene {
 
     private static config = {
@@ -47,7 +38,7 @@ export class World extends Scene {
     private player!: Player;
     private cameraControls!: CameraControls;
     private trees: SeedTree[] = [];
-    private waterPits: WaterPit[] = [];
+    // private waterPits: WaterPit[] = [];
     private context: IContext;
     private cursor: string | null = null;
     // private hud: HUD;
@@ -152,13 +143,18 @@ export class World extends Scene {
 
         this.load();
 
-        context.domElement.addEventListener('click', this.onClick.bind(this));
-        context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
-        document.addEventListener("pointermove", this.onPointerMove.bind(this));
-
-        window.addEventListener("resize", this.onResize.bind(this));
-        window.addEventListener('keydown', this.onKeyDown.bind(this));
-        window.addEventListener('keyup', this.onKeyUp.bind(this));
+        this.onClick = this.onClick.bind(this);
+        this.onRightClick = this.onRightClick.bind(this);
+        this.onPointerMove = this.onPointerMove.bind(this);
+        this.onResize = this.onResize.bind(this);
+        this.onKeyDown = this.onKeyDown.bind(this);
+        this.onKeyUp = this.onKeyUp.bind(this);
+        context.domElement.addEventListener('click', this.onClick);
+        context.domElement.addEventListener('contextmenu', this.onRightClick);
+        document.addEventListener("pointermove", this.onPointerMove);
+        window.addEventListener("resize", this.onResize);
+        window.addEventListener('keydown', this.onKeyDown);
+        window.addEventListener('keyup', this.onKeyUp);
 
         // const hudCanvas = document.getElementById("hud") as HTMLCanvasElement;
         // hudCanvas.width = context.domElement.clientWidth;
@@ -183,6 +179,16 @@ export class World extends Scene {
         // buildWater.onclick =() => this.enterBuildMode("water");
     }
 
+    private onIssuesLoaded(event: THREE.Event) {       
+        console.log("onIssuesLoaded");
+        this.removeEventListener("issuesLoaded", this.onIssuesLoaded);
+        this.taskLoading = false;
+        this.tasksInitialized = true;
+        document.getElementById("task-loading")?.classList.add("hidden");
+        document.getElementById("tasks")?.classList.remove("hidden");
+        this.fillTaskList(JSON.parse(event.message) as ITask[]);        
+    }
+
     private openTasksPanel() {
         const panel = (document.getElementById("task-panel") as HTMLElement);
         panel.classList.toggle("hidden");
@@ -192,15 +198,10 @@ export class World extends Scene {
         }
 
         if (!this.tasksInitialized) {
-            this.taskLoading = true;
-            // TODO load tasks from Jira
-            setTimeout(() => {
-                this.taskLoading = false;
-                this.tasksInitialized = true;
-                document.getElementById("task-loading")?.classList.add("hidden");
-                document.getElementById("tasks")?.classList.remove("hidden");
-                this.fillTaskList();
-            }, 1000);        
+            this.taskLoading = true;            
+            this.onIssuesLoaded = this.onIssuesLoaded.bind(this);
+            this.addEventListener("issuesLoaded", this.onIssuesLoaded);             
+            this.dispatchEvent({ type: "loadIssues" });
         }
     }
 
@@ -212,40 +213,12 @@ export class World extends Scene {
         document.getElementById("tasks")?.classList.add("hidden");
 
         this.taskLoading = true;
-        setTimeout(() => {
-            this.taskLoading = false;            
-            document.getElementById("task-loading")?.classList.add("hidden");
-            document.getElementById("tasks")?.classList.remove("hidden");
-            this.fillTaskList();
-        }, 1000);  
+        this.addEventListener("issuesLoaded", this.onIssuesLoaded);
+        this.dispatchEvent({ type: "loadIssues" });        
     }
 
-    private fillTaskList() {
-        const taskList = document.getElementById("task-list") as HTMLElement;
-        const tasks = [
-            {
-                key: "KEY-0",
-                summary: "This is a test summary, if it's too long it will show ellipsis",
-                status: "In Progress",
-                coords: Utils.vec3.zero,
-                type: "tree"
-            },
-            {
-                key: "KEY-1",
-                summary: "This is a test summary, if it's too long it will show ellipsis",
-                status: "In Progress",
-                coords: Utils.vec3.zero,
-                type: "tree"
-            },
-            {
-                key: "KEY-2",
-                summary: "This is a test summary, if it's too long it will show ellipsis",
-                status: "In Progress",
-                coords: Utils.vec3.zero,
-                type: "tree"
-            }
-        ];
-
+    private fillTaskList(tasks: ITask[]) {
+        const taskList = document.getElementById("task-list") as HTMLElement;        
         const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
 
         let availableTasks = 0;
@@ -454,7 +427,7 @@ export class World extends Scene {
         }
     }*/
     
-    private updateFlowerCells(newTree: Cell) {
+    /*private updateFlowerCells(newTree: Cell) {
         const flowerRadius = 10;
         const { radius, cellResolution } = World.config;
         const cellSize = radius * 2 / cellResolution;
@@ -495,9 +468,9 @@ export class World extends Scene {
         }
 
         this.flowerCells = [...this.flowerCells, ...cells];
-    }
+    }*/
 
-    private updateBushCells(newWater: Cell) {
+    /*private updateBushCells(newWater: Cell) {
         const bushRadius = 8;
         const { radius, cellResolution } = World.config;
         const cellSize = radius * 2 / cellResolution;
@@ -538,9 +511,9 @@ export class World extends Scene {
         }
 
         this.bushCells = [...this.bushCells, ...cells];
-    }
+    }*/
 
-    private updateWaterCells(newWater: Cell) {
+    /*private updateWaterCells(newWater: Cell) {
         const waterRadius = 8;
         const { radius, cellResolution } = World.config;
         const cellSize = radius * 2 / cellResolution;        
@@ -574,9 +547,9 @@ export class World extends Scene {
             }
             currentPos.copy(startPos).addScaledVector(forward, -stepSize * (i + 1));
         }
-    }
+    }*/
 
-    private updateTreeCells(newWater: Cell) {
+    /*private updateTreeCells(newWater: Cell) {
         if (this.waterPits.length < 2) {
             return; // trees require at least 2 water pits
         }
@@ -646,7 +619,7 @@ export class World extends Scene {
         });
 
         this.treeCells = [...this.treeCells, ...cells];
-    }
+    }*/
 
     public dispose() {
         this.context.domElement.removeEventListener('click', this.onClick);
@@ -951,9 +924,9 @@ export class World extends Scene {
         return false;
     }
     
-    private updateUI() {
-        (document.getElementById("seedCount") as HTMLElement).innerText = `x ${this.state.seedCount}`;
-    }
+    // private updateUI() {
+    //     (document.getElementById("seedCount") as HTMLElement).innerText = `x ${this.state.seedCount}`;
+    // }
 
     private onRightClick(event: MouseEvent) {
         event.preventDefault();

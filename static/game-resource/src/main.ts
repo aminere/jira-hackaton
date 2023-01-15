@@ -4,9 +4,11 @@ import { World } from './world';
 import { GUI } from 'dat.gui';
 import { Fonts } from './Fonts';
 import { Images } from './Images';
+import { Utils } from './utils';
 
-// import { invoke, view } from '@forge/bridge';
-// import { RESOLVERS } from '../../../src/types';
+import { invoke, view } from '@forge/bridge';
+import { RESOLVERS } from '../../../src/types';
+import { ITask } from './types';
 
 const renderer = new THREE.WebGLRenderer({
   canvas: document.getElementById('game') as HTMLCanvasElement,
@@ -19,6 +21,35 @@ renderer.toneMappingExposure = 0.5;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+async function forgeInit() {
+  console.log("forgeInit");
+  const context = await view.getContext();
+  const product = context.extension.type === 'macro' ? 'confluence' : context.extension.type.split(':')[0];
+  console.log({ product }); 
+}
+
+async function loadIssues() {
+  const rawIssues = await invoke(RESOLVERS.GET_ISSUES, { }) as any;
+  // const rawIssues = { data: { issues: [] } };
+  const issues = rawIssues.data.issues.map((rawIssue: any) => {    
+    return {  
+      id: rawIssue.id,    
+      key: rawIssue.key,
+      summary: rawIssue.fields.summary,
+      status: rawIssue.fields.status.name,
+      coords: Utils.vec3.zero,
+      type: "tree"
+    } as ITask;
+  }) as ITask[];
+
+  return issues;
+}
+
+// async function loadIssue(issueId: string) {
+//   const issue = await invoke(RESOLVERS.GET_ISSUE, { issueId });
+//   console.log(issue);
+// }
+
 Fonts.preload()
   .then(() => Images.preload([
     "ui/jira-logo.png",    
@@ -26,6 +57,7 @@ Fonts.preload()
     "ui/refresh.png",
     "ui/close.svg"
   ]))
+  .then(() => forgeInit())
   .then(() => (document.getElementById("ui") as HTMLElement).style.display = "flex");
 
 const camera = new THREE.PerspectiveCamera(80, 1, .1, 100);
@@ -57,21 +89,28 @@ function onResize() {
 onResize();
 window.addEventListener('resize', onResize);
 
-/*async function forgeInit() {
+world.addEventListener("loadIssues", () => {
+  loadIssues()
+    .then(issues => {
+      world.dispatchEvent({
+        type: "issuesLoaded", message: JSON.stringify(issues)
+      })
+    });
+});
+
+/*
+async function forgeInit() {
   console.log("forgeInit");
   const context = await view.getContext();
   const product = context.extension.type === 'macro' ? 'confluence' : context.extension.type.split(':')[0];
-  console.log({ context });
   console.log({ product });
-
-  // const projects = await invoke(RESOLVERS.GET_PROJECTS, { expand: 'urls' });
-  // console.log({ projects});
-  // const projectIds = (projects as any).data.values.map((v: any) => v.id);
-  // const projectIds = (projects as any).data.values.map((v: any) => v.id);
-  // console.log({ projectIds });
 
   const issues = await invoke(RESOLVERS.GET_ISSUES, { });
   console.log({ issues });
+
+  const issue = await invoke(RESOLVERS.GET_ISSUE, { issueId: "10001" });
+  console.log(issue);
+
   // status is in issue.fields.status.name
   // "To Do"  "In Progress"
 }

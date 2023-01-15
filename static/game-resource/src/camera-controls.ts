@@ -42,10 +42,14 @@ export class CameraControls {
         folder.add(this.config, 'lookAtOffsetZ', 0, 50, .1);
         // folder.open();
 
-        document.addEventListener('pointermove', this.onPointerMove.bind(this));
-        document.addEventListener('pointerenter', this.onPointerEnter.bind(this));
-        document.addEventListener('pointerleave', this.onPointerLeave.bind(this));
-        document.addEventListener('wheel', this.onWheel.bind(this));
+        this.onPointerMove = this.onPointerMove.bind(this);
+        this.onPointerEnter = this.onPointerEnter.bind(this);
+        this.onPointerLeave = this.onPointerLeave.bind(this);
+        this.onWheel = this.onWheel.bind(this);
+        document.addEventListener('pointermove', this.onPointerMove);
+        document.addEventListener('pointerenter', this.onPointerEnter);
+        document.addEventListener('pointerleave', this.onPointerLeave);
+        document.addEventListener('wheel', this.onWheel);
     }
 
     public dispose() {
