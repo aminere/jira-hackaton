@@ -19,6 +19,7 @@ export class SeedTree extends Object3D {
     private foliageMaterial!: CustomShaderMaterial;
 
     private icon!: HTMLElement;
+    private panel!: HTMLElement;
     private inFrontOfCamera = false;
 
     private static config = {
@@ -27,9 +28,10 @@ export class SeedTree extends Object3D {
         seedHeight: 3
     };
 
-    constructor(context: IContext, icon: HTMLElement) {
+    constructor(context: IContext, icon: HTMLElement, panel: HTMLElement) {
         super();
         this.icon = icon;
+        this.panel = panel;
         this.context = context;
         
         this.load();
@@ -78,9 +80,10 @@ export class SeedTree extends Object3D {
         const inFrontOfCamera = Math.abs(normalizedPos.x) < 0.3 && Math.abs(normalizedPos.y) < 0.3;
         if (inFrontOfCamera !== this.inFrontOfCamera) {
             if (inFrontOfCamera) {
-                this.icon.style.display = 'block';
+                this.icon.classList.remove('hidden');
             } else {
-                this.icon.style.display = 'none';
+                this.icon.classList.add('hidden');
+                this.panel.classList.add('hidden');
             }
             this.inFrontOfCamera = inFrontOfCamera;
         }

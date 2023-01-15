@@ -15,20 +15,26 @@ import { SeedTree } from './seed-tree';
 import { Collision } from './collision';
 import { Utils } from './utils';
 import { WaterPit } from './water-pit';
-import { HUD } from './hud';
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import type { Cell } from './cell';
 
 type Action = "flower" | "bush" | "tree" | "water" | "none";
 
-type SerializedWorld = Array<{ type: string; coords: Vector3; taskKey: string }>;
-
 interface IState {
     seedCount: number;
     coins: number;
     action: Action;
     keys: Map<string, boolean>;
+}
+
+interface ITask {
+    key: string;
+    summary: string;
+    status: string;
+
+    type: string; 
+    coords: Vector3;
 }
 
 export class World extends Scene {
@@ -54,12 +60,11 @@ export class World extends Scene {
     private bushCells: Cell[] = [];
     private waterCells: Cell[] = [];
     private treeCells: Cell[] = [];
-
-    private serializedWorld: SerializedWorld = [];
-    private saveToLocalStorage = true;
+    
     private taskLoading = false;
     private tasksInitialized = false;
-    private taskToPlant: string | null = null;
+    private taskToPlant: ITask | null = null;
+    private openPanels: HTMLElement[] = [];
 
     private state: IState = {
         seedCount: 0,
@@ -123,8 +128,6 @@ export class World extends Scene {
 
         this.addSky(this.player, context.debugUI);
 
-        this.serializedWorld = JSON.parse(localStorage.getItem("map") ?? `[]`) as SerializedWorld;
-
         // init tree cells
         this.terrain.faces.forEach(face => {
             face.children.forEach(c => {
@@ -134,14 +137,13 @@ export class World extends Scene {
             });
         });
 
-        this.saveToLocalStorage = false;
-        this.serializedWorld.forEach(({ type, coords, taskKey }) => {
-            switch (type) {
-                case "tree": this.buildTree(this.terrain.getCell(coords), taskKey); break;
+        const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}") as Record<string, ITask>;
+        Object.values(plantedIssues).forEach(issue => {                        
+            // switch (type) {
+                this.buildTree(this.terrain.getCell(issue.coords), issue);
                 // case "water": this.buildWater(this.terrain.getCell(coords)); break;
-            }
+            // }
         });
-        this.saveToLocalStorage = true;
 
         // cellResolution = 12
         // this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution / 2 - 1, 4)));
@@ -152,7 +154,7 @@ export class World extends Scene {
 
         context.domElement.addEventListener('click', this.onClick.bind(this));
         context.domElement.addEventListener('contextmenu', this.onRightClick.bind(this));
-        context.domElement.addEventListener("pointermove", this.onPointerMove.bind(this));
+        document.addEventListener("pointermove", this.onPointerMove.bind(this));
 
         window.addEventListener("resize", this.onResize.bind(this));
         window.addEventListener('keydown', this.onKeyDown.bind(this));
@@ -224,14 +226,23 @@ export class World extends Scene {
             {
                 key: "KEY-0",
                 summary: "This is a test summary, if it's too long it will show ellipsis",
+                status: "In Progress",
+                coords: Utils.vec3.zero,
+                type: "tree"
             },
             {
                 key: "KEY-1",
                 summary: "This is a test summary, if it's too long it will show ellipsis",
+                status: "In Progress",
+                coords: Utils.vec3.zero,
+                type: "tree"
             },
             {
                 key: "KEY-2",
                 summary: "This is a test summary, if it's too long it will show ellipsis",
+                status: "In Progress",
+                coords: Utils.vec3.zero,
+                type: "tree"
             }
         ];
 
@@ -260,7 +271,7 @@ export class World extends Scene {
             button.appendChild(buttonText);
             button.onclick = () => {      
                 document.getElementById("task-panel")?.classList.add("hidden");
-                this.taskToPlant = task.key;
+                this.taskToPlant = task;
                 this.enterBuildMode("tree");
             };
 
@@ -311,19 +322,81 @@ export class World extends Scene {
         cell.mesh.material = Terrain.materials.invalid;
     }
 
-    private buildTree(cell: Cell, taskKey: string) {
+    private buildTree(cell: Cell, task: ITask) {
 
         const hud = document.getElementById("hud") as HTMLElement;
 
-        // const container = document.createElement("div");
-        // container.style.display = "none";
+        const container = document.createElement("div");
+        container.classList.add("tree-container", "hidden");
+
+        const panel = document.createElement("div");
+        panel.classList.add("tree-panel", "hidden");
+        panel.id = `panel-${task.key}`;
+        const key = document.createElement("div");
+        key.innerText = task.key;
+        const status = document.createElement("div");
+        status.innerText = `STATUS: ${task.status}`;
+        const summary = document.createElement("div");
+        summary.innerText = task.summary;
+        panel.appendChild(key);
+        panel.appendChild(status);
+        panel.appendChild(summary);
+
+        const controls = document.createElement("div");
+        controls.classList.add("tree-controls");
+        const refresh = document.createElement("button");
+        refresh.classList.add("tooltip");
+        refresh.type = "button";
+        const refreshIcon = document.createElement("img");
+        refreshIcon.src = "ui/refresh.png";
+        const refreshTooltip = document.createElement("span");
+        refreshTooltip.classList.add("tooltiptext");
+        refreshTooltip.innerText = "Refresh Issue";
+        refresh.appendChild(refreshIcon);
+        refresh.appendChild(refreshTooltip);
+        const close = document.createElement("button");
+        close.classList.add("tooltip");
+        close.type = "button";
+
+        close.onclick = () => {
+
+        };
+
+        const closeIcon = document.createElement("img");
+        closeIcon.src = "ui/close.svg";
+        const closeTooltip = document.createElement("span");
+        closeTooltip.classList.add("tooltiptext");
+        closeTooltip.innerText = "Remove Tree";        
+        close.appendChild(closeIcon);
+        close.appendChild(closeTooltip);        
+        controls.appendChild(refresh);
+        controls.appendChild(close);
+        panel.appendChild(controls);
+        container.appendChild(panel);
 
         const icon = document.createElement("img");
-        icon.style.display = "none";
+        // icon.style.display = "none";
         icon.src = "ui/jira-icon.png";
-        hud.appendChild(icon);
+        icon.onclick = () => {
+            panel.classList.toggle("hidden");
+            this.openPanels.forEach(p => {
+                if (p !== panel) {
+                    p.classList.add("hidden");
+                }
+            });
+            if (!panel.classList.contains("hidden")) {
+                const index = this.openPanels.findIndex(p => p === panel);
+                if (index < 0) {
+                    console.log("adding panel..");
+                    this.openPanels.push(panel);
+                }
+            }
+        };
+        container.appendChild(icon);
+        
+        hud.appendChild(container);
 
-        const tree = new SeedTree(this.context, icon);
+        const tree = new SeedTree(this.context, container, panel);
         tree.position.copy(cell.worldPos);
         this.castOnSphere(tree);
         cell.content = tree;
@@ -337,16 +410,7 @@ export class World extends Scene {
         //     pit1.cellsPerNeighbor.get(pit2)?.forEach(c => {
         //         c.valid["tree"] = false;
         //     });
-        // }
-
-        if (this.saveToLocalStorage) {
-            this.serializedWorld.push({
-                type: "tree",
-                coords: cell.coords,
-                taskKey
-            });
-            localStorage.setItem("map", JSON.stringify(this.serializedWorld));
-        }
+        // }        
     }
 
     /*private buildWater(cell: Cell) {
@@ -577,7 +641,7 @@ export class World extends Scene {
     public dispose() {
         this.context.domElement.removeEventListener('click', this.onClick);
         this.context.domElement.removeEventListener('contextmenu', this.onRightClick);
-        this.context.domElement.removeEventListener('pointermove', this.onPointerMove);
+        document.removeEventListener('pointermove', this.onPointerMove);
         window.removeEventListener("resize", this.onResize);
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('keyup', this.onKeyUp);
@@ -627,10 +691,18 @@ export class World extends Scene {
 
                     if (this.taskToPlant) {                       
                         const taskList = document.getElementById("task-list") as HTMLElement;
-                        const taskElem = document.getElementById(`task-${this.taskToPlant}`) as HTMLElement;
+                        const taskElem = document.getElementById(`task-${this.taskToPlant.key}`) as HTMLElement;
                         taskList.removeChild(taskElem);
+
                         const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
-                        plantedIssues[this.taskToPlant] = true;
+                        plantedIssues[this.taskToPlant.key] = {
+                            key: this.taskToPlant.key,
+                            summary: this.taskToPlant.summary,
+                            status: this.taskToPlant.status,
+
+                            coords: this.selectedCell.coords.clone(),
+                            type: "tree"
+                        } as ITask;
                         localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
 
                         if (taskList.children.length === 0) {

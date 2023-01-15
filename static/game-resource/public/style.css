@@ -37,11 +37,14 @@ body {
     pointer-events: none;
 }
 
-#hud > img {
-    width: 12vmin;
+.tree-container {
     position: absolute;
-    cursor: pointer;
     pointer-events: all;
+}
+
+.tree-container > img {
+    cursor: pointer;
+    width: 11vmin;
 }
 
 button {
@@ -222,11 +225,17 @@ button:active {
     border-radius: 2vmin;
     padding: 2vmin;
     position: absolute;
-    left: 30px;
-    top: 30px;
+    left: calc(-15vmin + 3vmin);
+    top: 10vmin;
+    color: white;
 }
 
 .tree-panel img {
-    height: 6vmin;
+    width: 6vmin;
     margin: 1vmin;
+}
+
+.tree-controls {
+    display: flex;
+    gap: 2vmin;
 }

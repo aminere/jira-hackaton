@@ -42,18 +42,18 @@ export class CameraControls {
         folder.add(this.config, 'lookAtOffsetZ', 0, 50, .1);
         // folder.open();
 
-        props.context.domElement.addEventListener('pointermove', this.onPointerMove.bind(this));
-        props.context.domElement.addEventListener('pointerenter', this.onPointerEnter.bind(this));
-        props.context.domElement.addEventListener('pointerleave', this.onPointerLeave.bind(this));
-        props.context.domElement.addEventListener('wheel', this.onWheel.bind(this));
+        document.addEventListener('pointermove', this.onPointerMove.bind(this));
+        document.addEventListener('pointerenter', this.onPointerEnter.bind(this));
+        document.addEventListener('pointerleave', this.onPointerLeave.bind(this));
+        document.addEventListener('wheel', this.onWheel.bind(this));
     }
 
     public dispose() {
-        const { context } = this.props;
-        context.domElement.removeEventListener('pointermove', this.onPointerMove);
-        context.domElement.removeEventListener('pointerenter', this.onPointerEnter);
-        context.domElement.removeEventListener('pointerleave', this.onPointerLeave);
-        context.domElement.removeEventListener('wheel', this.onWheel);
+        // const { context } = this.props;
+        document.removeEventListener('pointermove', this.onPointerMove);
+        document.removeEventListener('pointerenter', this.onPointerEnter);
+        document.removeEventListener('pointerleave', this.onPointerLeave);
+        document.removeEventListener('wheel', this.onWheel);
     }
 
     public update(deltaTime: number) {           
