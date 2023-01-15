@@ -156,6 +156,9 @@ export class World extends Scene {
         window.addEventListener('keydown', this.onKeyDown);
         window.addEventListener('keyup', this.onKeyUp);
 
+        this.onIssueLoaded = this.onIssueLoaded.bind(this);
+        this.onIssuesLoaded = this.onIssuesLoaded.bind(this);
+
         // const hudCanvas = document.getElementById("hud") as HTMLCanvasElement;
         // hudCanvas.width = context.domElement.clientWidth;
         // hudCanvas.height = context.domElement.clientHeight;
@@ -183,7 +186,6 @@ export class World extends Scene {
         console.log("onIssuesLoaded");
         this.removeEventListener("issuesLoaded", this.onIssuesLoaded);
         this.taskLoading = false;
-        this.tasksInitialized = true;
         document.getElementById("task-loading")?.classList.add("hidden");
         document.getElementById("tasks")?.classList.remove("hidden");
         this.fillTaskList(JSON.parse(event.message) as ITask[]);        
@@ -193,13 +195,15 @@ export class World extends Scene {
         const panel = (document.getElementById("task-panel") as HTMLElement);
         panel.classList.toggle("hidden");
 
+        this.openPanels.forEach(p => p.classList.add("hidden"));
+
         if (this.taskLoading) {
             return;
         }
 
         if (!this.tasksInitialized) {
-            this.taskLoading = true;            
-            this.onIssuesLoaded = this.onIssuesLoaded.bind(this);
+            this.tasksInitialized = true;
+            this.taskLoading = true;                        
             this.addEventListener("issuesLoaded", this.onIssuesLoaded);             
             this.dispatchEvent({ type: "loadIssues" });
         }
@@ -223,7 +227,7 @@ export class World extends Scene {
 
         let availableTasks = 0;
         tasks.forEach(task => {
-            if (task.key in plantedIssues) {
+            if (task.id in plantedIssues) {
                 // task already planted
                 return;
             }
@@ -295,6 +299,32 @@ export class World extends Scene {
         cell.mesh.material = Terrain.materials.invalid;
     }
 
+    private onIssueLoaded(event: THREE.Event) {
+        console.log("onIssueLoaded");
+        this.removeEventListener("issueLoaded", this.onIssueLoaded);        
+        const issue = JSON.parse(event.message) as ITask;
+
+        const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
+        const plantedIssue = plantedIssues[issue.id] as ITask;
+        plantedIssue.summary = issue.summary;
+        plantedIssue.status = issue.status;
+
+        const cell = this.terrain.getCell(plantedIssue.coords);
+        if (cell) {
+            const tree = cell.content as SeedTree;
+            const status = tree.panel.querySelector(`#status-${issue.id}`) as HTMLElement;
+            status.innerText = `${issue.status}`;
+            const summary = tree.panel.querySelector(`#summary-${issue.id}`) as HTMLElement;
+            summary.innerText = `${issue.summary}`;            
+            tree.icon.classList.remove("hidden");
+            tree.loader.classList.add("hidden");
+        }
+
+        this.trees.forEach(tree => {
+            tree.refresh.classList.remove("hidden");            
+        });
+    }
+
     private buildTree(cell: Cell, task: ITask) {
 
         const hud = document.getElementById("hud") as HTMLElement;
@@ -304,12 +334,13 @@ export class World extends Scene {
 
         const panel = document.createElement("div");
         panel.classList.add("tree-panel", "hidden");
-        panel.id = `panel-${task.key}`;
         const key = document.createElement("div");
         key.innerText = task.key;
         const status = document.createElement("div");
+        status.id = `status-${task.id}`;
         status.innerText = `STATUS: ${task.status}`;
         const summary = document.createElement("div");
+        summary.id = `summary-${task.id}`;
         summary.innerText = task.summary;
         panel.appendChild(key);
         panel.appendChild(status);
@@ -320,6 +351,23 @@ export class World extends Scene {
         const refresh = document.createElement("button");
         refresh.classList.add("tooltip");
         refresh.type = "button";
+
+        const loader = document.createElement("div");
+        loader.classList.add("loader", "tree-loader", "hidden");
+
+        refresh.onclick = () => {
+            this.addEventListener("issueLoaded", this.onIssueLoaded);
+            this.dispatchEvent({ type: "loadIssue", message: task.id });
+            
+            icon.classList.add("hidden");
+            panel.classList.add("hidden");
+            loader.classList.remove("hidden");
+
+            this.trees.forEach(tree => {
+                tree.refresh.classList.add("hidden");
+            });
+        };
+
         const refreshIcon = document.createElement("img");
         refreshIcon.src = "ui/refresh.png";
         const refreshTooltip = document.createElement("span");
@@ -339,7 +387,7 @@ export class World extends Scene {
             cell.content = null;
 
             const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
-            delete plantedIssues[task.key];
+            delete plantedIssues[task.id];
             localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
 
             container.parentNode?.removeChild(container);
@@ -354,11 +402,9 @@ export class World extends Scene {
         close.appendChild(closeTooltip);        
         controls.appendChild(refresh);
         controls.appendChild(close);
-        panel.appendChild(controls);
-        container.appendChild(panel);
+        panel.appendChild(controls);        
 
         const icon = document.createElement("img");
-        // icon.style.display = "none";
         icon.src = "ui/jira-icon.png";
         icon.onclick = () => {
             panel.classList.toggle("hidden");
@@ -370,16 +416,18 @@ export class World extends Scene {
             if (!panel.classList.contains("hidden")) {
                 const index = this.openPanels.findIndex(p => p === panel);
                 if (index < 0) {
-                    console.log("adding panel..");
                     this.openPanels.push(panel);
                 }
             }
-        };
-        container.appendChild(icon);
+        };        
+
+        container.appendChild(icon);        
+        container.appendChild(loader);
+        container.appendChild(panel);
         
         hud.appendChild(container);
 
-        const tree = new SeedTree(this.context, container, panel);
+        const tree = new SeedTree(this.context, container, icon, panel, loader, refresh);
         tree.position.copy(cell.worldPos);
         this.castOnSphere(tree);
         cell.content = tree;
@@ -678,7 +726,8 @@ export class World extends Scene {
                         taskList.removeChild(taskElem);
 
                         const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
-                        plantedIssues[this.taskToPlant.key] = {
+                        plantedIssues[this.taskToPlant.id] = {
+                            id: this.taskToPlant.id,
                             key: this.taskToPlant.key,
                             summary: this.taskToPlant.summary,
                             status: this.taskToPlant.status,

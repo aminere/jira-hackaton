@@ -18,8 +18,11 @@ export class SeedTree extends Object3D {
 
     private foliageMaterial!: CustomShaderMaterial;
 
-    private icon!: HTMLElement;
-    private panel!: HTMLElement;
+    private container!: HTMLElement;
+    public icon!: HTMLElement;
+    public panel!: HTMLElement;
+    public loader!: HTMLElement;
+    public refresh!: HTMLElement;
     private inFrontOfCamera = false;
 
     private static config = {
@@ -28,10 +31,13 @@ export class SeedTree extends Object3D {
         seedHeight: 3
     };
 
-    constructor(context: IContext, icon: HTMLElement, panel: HTMLElement) {
+    constructor(context: IContext, container: HTMLElement, icon: HTMLElement, panel: HTMLElement, loader: HTMLElement, refresh: HTMLElement) {
         super();
+        this.container = container;
         this.icon = icon;
         this.panel = panel;
+        this.loader = loader;
+        this.refresh = refresh;
         this.context = context;
         
         this.load();
@@ -80,17 +86,17 @@ export class SeedTree extends Object3D {
         const inFrontOfCamera = Math.abs(normalizedPos.x) < 0.3 && Math.abs(normalizedPos.y) < 0.3;
         if (inFrontOfCamera !== this.inFrontOfCamera) {
             if (inFrontOfCamera) {
-                this.icon.classList.remove('hidden');
+                this.container.classList.remove('hidden');
             } else {
-                this.icon.classList.add('hidden');
+                this.container.classList.add('hidden');
                 this.panel.classList.add('hidden');
             }
             this.inFrontOfCamera = inFrontOfCamera;
         }
 
         if (inFrontOfCamera) {
-            this.icon.style.left = `calc(${screenPos.x}px - 6vmin)`;
-            this.icon.style.top = `calc(${screenPos.y}px - 6vmin)`;
+            this.container.style.left = `calc(${screenPos.x}px - 6vmin)`;
+            this.container.style.top = `calc(${screenPos.y}px - 6vmin)`;
         }
     }
 

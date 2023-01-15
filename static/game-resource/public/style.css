@@ -98,6 +98,11 @@ button:active {
     animation: spin 2s linear infinite;
 }
 
+.tree-loader {
+    width: 5vmin !important;
+    height: 5vmin !important;
+}
+
 .hidden {
     display: none !important;
 }
@@ -170,6 +175,7 @@ button:active {
     gap: 2vmin;
     margin: 1vmin 0;
     width: 100%;
+    min-height: 5vmin
 }
 
 #no-tasks {

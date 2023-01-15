@@ -20,7 +20,7 @@ export class CameraControls {
     private previousTouch: Vector2 | null = null;
 
     private yaw = 0;
-    private touchInside = false;
+    private touchInside = true;
     private zoom = 0;
 
     private config = {
@@ -43,11 +43,11 @@ export class CameraControls {
         // folder.open();
 
         this.onPointerMove = this.onPointerMove.bind(this);
-        this.onPointerEnter = this.onPointerEnter.bind(this);
+        this.onPointerOver = this.onPointerOver.bind(this);
         this.onPointerLeave = this.onPointerLeave.bind(this);
         this.onWheel = this.onWheel.bind(this);
         document.addEventListener('pointermove', this.onPointerMove);
-        document.addEventListener('pointerenter', this.onPointerEnter);
+        document.addEventListener('pointerover', this.onPointerOver);
         document.addEventListener('pointerleave', this.onPointerLeave);
         document.addEventListener('wheel', this.onWheel);
     }
@@ -55,7 +55,7 @@ export class CameraControls {
     public dispose() {
         // const { context } = this.props;
         document.removeEventListener('pointermove', this.onPointerMove);
-        document.removeEventListener('pointerenter', this.onPointerEnter);
+        document.removeEventListener('pointerover', this.onPointerOver);
         document.removeEventListener('pointerleave', this.onPointerLeave);
         document.removeEventListener('wheel', this.onWheel);
     }
@@ -140,7 +140,7 @@ export class CameraControls {
         }
     }
 
-    private onPointerEnter() {
+    private onPointerOver() {
         this.touchInside = true;
     }
 

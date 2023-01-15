@@ -6,7 +6,7 @@ import { Fonts } from './Fonts';
 import { Images } from './Images';
 import { Utils } from './utils';
 
-import { invoke, view } from '@forge/bridge';
+// import { invoke, view } from '@forge/bridge';
 import { RESOLVERS } from '../../../src/types';
 import { ITask } from './types';
 
@@ -23,14 +23,35 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 async function forgeInit() {
   console.log("forgeInit");
-  const context = await view.getContext();
-  const product = context.extension.type === 'macro' ? 'confluence' : context.extension.type.split(':')[0];
-  console.log({ product }); 
+  // const context = await view.getContext();
+  // const product = context.extension.type === 'macro' ? 'confluence' : context.extension.type.split(':')[0];
+  // console.log({ product }); 
 }
 
 async function loadIssues() {
-  const rawIssues = await invoke(RESOLVERS.GET_ISSUES, { }) as any;
-  // const rawIssues = { data: { issues: [] } };
+  // const rawIssues = await invoke(RESOLVERS.GET_ISSUES, { }) as any;
+  const rawIssues = { data: { issues: [
+    {
+      id: "ID-0",
+      key: "KEY-0",
+      fields: {
+        summary: "This is a test summary, if it's too long it will show ellipsis",
+        status: { name: "In Progress" }
+      },      
+      coords: Utils.vec3.zero,
+      type: "tree"
+    },
+    {
+      id: "ID-1",
+      key: "KEY-1",
+      fields: {
+        summary: "This is a test summary, if it's too long it will show ellipsis",
+        status: { name: "In Progress" }
+      },
+      coords: Utils.vec3.zero,
+      type: "tree"
+    },
+  ] } };
   const issues = rawIssues.data.issues.map((rawIssue: any) => {    
     return {  
       id: rawIssue.id,    
@@ -45,10 +66,22 @@ async function loadIssues() {
   return issues;
 }
 
-// async function loadIssue(issueId: string) {
-//   const issue = await invoke(RESOLVERS.GET_ISSUE, { issueId });
-//   console.log(issue);
-// }
+async function loadIssue(issueId: string) {
+  // const issue = await invoke(RESOLVERS.GET_ISSUE, { issueId });
+  // console.log(issue);
+  return new Promise<ITask>((resolve, reject) => {
+    setTimeout(() => {
+      resolve({
+        id: issueId,    
+        key: "test",
+        summary: "test",
+        status: "test",
+        coords: Utils.vec3.zero,
+        type: "tree"
+      } as ITask);
+    }, 5000);
+  });
+}
 
 Fonts.preload()
   .then(() => Images.preload([
@@ -94,7 +127,18 @@ world.addEventListener("loadIssues", () => {
     .then(issues => {
       world.dispatchEvent({
         type: "issuesLoaded", message: JSON.stringify(issues)
-      })
+      });
+    });
+});
+
+world.addEventListener("loadIssue", (event) => {
+  console.log("loadIssue", event.message);
+  const issueId = event.message;
+  loadIssue(issueId)
+    .then(issue => {
+      world.dispatchEvent({
+        type: "issueLoaded", message: JSON.stringify(issue)
+      });
     });
 });
 
