@@ -6,7 +6,7 @@ import { Fonts } from './Fonts';
 import { Images } from './Images';
 import { Utils } from './utils';
 
-// import { invoke, view } from '@forge/bridge';
+import { invoke, view } from '@forge/bridge';
 import { RESOLVERS } from '../../../src/types';
 import { ITask } from './types';
 
@@ -23,14 +23,14 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 async function forgeInit() {
   console.log("forgeInit");
-  // const context = await view.getContext();
-  // const product = context.extension.type === 'macro' ? 'confluence' : context.extension.type.split(':')[0];
-  // console.log({ product }); 
+  const context = await view.getContext();
+  const product = context.extension.type === 'macro' ? 'confluence' : context.extension.type.split(':')[0];
+  console.log({ product }); 
 }
 
 async function loadIssues() {
-  // const rawIssues = await invoke(RESOLVERS.GET_ISSUES, { }) as any;
-  const rawIssues = { data: { issues: [
+  const rawIssues = await invoke(RESOLVERS.GET_ISSUES, { }) as any;
+  /*const rawIssues = { data: { issues: [
     {
       id: "ID-0",
       key: "KEY-0",
@@ -51,7 +51,7 @@ async function loadIssues() {
       coords: Utils.vec3.zero,
       type: "tree"
     },
-  ] } };
+  ] } };*/
   const issues = rawIssues.data.issues.map((rawIssue: any) => {    
     return {  
       id: rawIssue.id,    
@@ -67,9 +67,18 @@ async function loadIssues() {
 }
 
 async function loadIssue(issueId: string) {
-  // const issue = await invoke(RESOLVERS.GET_ISSUE, { issueId });
-  // console.log(issue);
-  return new Promise<ITask>((resolve, reject) => {
+  const response = await invoke(RESOLVERS.GET_ISSUE, { issueId }) as any;
+  const [rawIssue] = response.data.issues;
+  return {
+    id: rawIssue.id,
+    key: rawIssue.key,
+    summary: rawIssue.fields.summary,
+    status: rawIssue.fields.status.name,
+    coords: Utils.vec3.zero,
+    type: "tree"
+  } as ITask;
+  /*console.log(issue);
+  return new Promise<ITask>((resolve) => {
     setTimeout(() => {
       resolve({
         id: issueId,    
@@ -80,7 +89,7 @@ async function loadIssue(issueId: string) {
         type: "tree"
       } as ITask);
     }, 5000);
-  });
+  });*/
 }
 
 Fonts.preload()
