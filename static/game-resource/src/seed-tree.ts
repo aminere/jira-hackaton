@@ -2,20 +2,23 @@
 import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, TextureLoader, Vector3, FrontSide, MeshBasicMaterial, Color, Group } from "three";
 import { Collision } from "./collision";
 
-import { ISeed } from "./types";
+import { IContext, ISeed } from "./types";
 
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 
 import  CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import vert from './tree-vertex.glsl.js';
+import { Utils } from "./utils";
 
 export class SeedTree extends Object3D {
 
-    // private readonly context: IContext;
+    private readonly context: IContext;
 
     private readonly seeds: ISeed[] = [];
 
     private foliageMaterial!: CustomShaderMaterial;
+
+    private icon!: HTMLElement;
 
     private static config = {
         seedAngularSpeed: 30,
@@ -23,9 +26,10 @@ export class SeedTree extends Object3D {
         seedHeight: 3
     };
 
-    constructor() {
+    constructor(context: IContext, icon: HTMLElement) {
         super();
-        // this.context = context;
+        this.icon = icon;
+        this.context = context;
         
         this.load();
         // [...Array(3)].forEach(() => this.spawnSeed());        
@@ -55,16 +59,22 @@ export class SeedTree extends Object3D {
     }
 
     public update(deltaTime: number) {
-        const { seedAngularSpeed } = SeedTree.config;
+        /*const { seedAngularSpeed } = SeedTree.config;
         this.seeds.forEach(seed => {
             seed.angle += deltaTime * seedAngularSpeed;
             this.updateSeedPosition(seed);
-        });
+        });*/
 
         const windTime = this.foliageMaterial?.uniforms?.u_windTime;
         if (windTime) {
             windTime.value += this.foliageMaterial.uniforms.u_windSpeed.value * deltaTime;
         }
+
+        // update HUD
+        const [worldPos, screenPos] = Utils.pool.vec3;
+        Utils.getScreenPosition(this.getWorldPosition(worldPos), this.context, screenPos);
+        this.icon.style.left = `calc(${screenPos.x}px - 4vmin)`;
+        this.icon.style.top = `calc(${screenPos.y}px - 4vmin)`;
     }
 
     public rayCast(ray: Ray) {

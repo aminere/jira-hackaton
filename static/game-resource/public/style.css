@@ -37,6 +37,13 @@ body {
     pointer-events: none;
 }
 
+#hud > img {
+    width: 8vmin;
+    position: absolute;
+    cursor: pointer;
+    pointer-events: all;
+}
+
 button {
     background-color: #dcdcdc;
     cursor: pointer;

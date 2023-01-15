@@ -21,8 +21,9 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 Fonts.preload()
   .then(() => Images.preload([
-    "ui/jira-logo.png",
-    "ui/refresh.png",
+    "ui/jira-logo.png",    
+    "ui/jira-icon.png",
+    "ui/refresh.png"
   ]))
   .then(() => (document.getElementById("ui") as HTMLElement).style.display = "flex");
 

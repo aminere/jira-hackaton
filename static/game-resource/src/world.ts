@@ -22,7 +22,7 @@ import type { Cell } from './cell';
 
 type Action = "flower" | "bush" | "tree" | "water" | "none";
 
-type SerializedWorld = Array<{ type: string; coords: Vector3 }>;
+type SerializedWorld = Array<{ type: string; coords: Vector3; taskKey: string }>;
 
 interface IState {
     seedCount: number;
@@ -44,7 +44,7 @@ export class World extends Scene {
     private waterPits: WaterPit[] = [];
     private context: IContext;
     private cursor: string | null = null;
-    private hud: HUD;
+    // private hud: HUD;
     private terrain: Terrain;    
     private selectedCell: Cell | null = null; 
 
@@ -59,6 +59,7 @@ export class World extends Scene {
     private saveToLocalStorage = true;
     private taskLoading = false;
     private tasksInitialized = false;
+    private taskToPlant: string | null = null;
 
     private state: IState = {
         seedCount: 0,
@@ -122,16 +123,22 @@ export class World extends Scene {
 
         this.addSky(this.player, context.debugUI);
 
-        this.serializedWorld = []; /*JSON.parse(localStorage.getItem("map") ?? `[
-            { "type": "tree", "coords": { "x": 0, "y": 5, "z": 4 } },
-            { "type": "water", "coords": { "x": 0, "y": 8, "z": 4 } }
-        ]`) as SerializedWorld;*/
+        this.serializedWorld = JSON.parse(localStorage.getItem("map") ?? `[]`) as SerializedWorld;
+
+        // init tree cells
+        this.terrain.faces.forEach(face => {
+            face.children.forEach(c => {
+                const _cell = c as Cell;
+                _cell.valid["tree"] = !Boolean(_cell.content);
+                this.treeCells.push(_cell);
+            });
+        });
 
         this.saveToLocalStorage = false;
-        this.serializedWorld.forEach(({ type, coords }) => {
+        this.serializedWorld.forEach(({ type, coords, taskKey }) => {
             switch (type) {
-                case "tree": this.buildTree(this.terrain.getCell(coords)); break;
-                case "water": this.buildWater(this.terrain.getCell(coords)); break;
+                case "tree": this.buildTree(this.terrain.getCell(coords), taskKey); break;
+                // case "water": this.buildWater(this.terrain.getCell(coords)); break;
             }
         });
         this.saveToLocalStorage = true;
@@ -149,12 +156,12 @@ export class World extends Scene {
 
         window.addEventListener("resize", this.onResize.bind(this));
         window.addEventListener('keydown', this.onKeyDown.bind(this));
-        window.addEventListener('keyup', this.onKeyUp.bind(this))
+        window.addEventListener('keyup', this.onKeyUp.bind(this));
 
-        const hudCanvas = document.getElementById("hud") as HTMLCanvasElement;
-        hudCanvas.width = context.domElement.clientWidth;
-        hudCanvas.height = context.domElement.clientHeight;
-        this.hud = new HUD(hudCanvas, context);
+        // const hudCanvas = document.getElementById("hud") as HTMLCanvasElement;
+        // hudCanvas.width = context.domElement.clientWidth;
+        // hudCanvas.height = context.domElement.clientHeight;
+        // this.hud = new HUD(hudCanvas, context);
         // this.hud.addMarker(tree, "Seed Tree");
 
         (document.getElementById("jira-logo") as HTMLButtonElement).onclick = () => this.openTasksPanel();
@@ -251,16 +258,10 @@ export class World extends Scene {
             const buttonText = document.createElement("span");
             buttonText.innerText = "PLANT ME";
             button.appendChild(buttonText);
-            button.onclick = () => {
-                console.log(`Planting ${task.key}`);
-                taskList.removeChild(taskElem);
-                const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
-                plantedIssues[task.key] = true;
-                localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
-
-                if (taskList.children.length === 0) {
-                    document.getElementById("no-tasks")?.classList.remove("hidden");
-                }
+            button.onclick = () => {      
+                document.getElementById("task-panel")?.classList.add("hidden");
+                this.taskToPlant = task.key;
+                this.enterBuildMode("tree");
             };
 
             taskElem.appendChild(key);
@@ -310,30 +311,40 @@ export class World extends Scene {
         cell.mesh.material = Terrain.materials.invalid;
     }
 
-    private buildTree(cell: Cell) {
-        const tree = new SeedTree();
+    private buildTree(cell: Cell, taskKey: string) {
+
+        const hud = document.getElementById("hud") as HTMLElement;
+        const icon = document.createElement("img");
+        icon.src = "ui/jira-icon.png";
+        hud.appendChild(icon);
+
+        const tree = new SeedTree(this.context, icon);
         tree.position.copy(cell.worldPos);
         this.castOnSphere(tree);
         cell.content = tree;
         this.add(tree);
         this.trees.push(tree);
-        this.updateFlowerCells(cell); // flowers at a radius from trees
 
-        if (cell.parentPits) {
-            // disable other cells that are in the area so that trees are not too close to each other
-            const [pit1, pit2] = cell.parentPits as [WaterPit, WaterPit];
-            pit1.cellsPerNeighbor.get(pit2)?.forEach(c => {
-                c.valid["tree"] = false;
-            });
-        }
+        // this.updateFlowerCells(cell); // flowers at a radius from trees
+        // if (cell.parentPits) {
+        //     // disable other cells that are in the area so that trees are not too close to each other
+        //     const [pit1, pit2] = cell.parentPits as [WaterPit, WaterPit];
+        //     pit1.cellsPerNeighbor.get(pit2)?.forEach(c => {
+        //         c.valid["tree"] = false;
+        //     });
+        // }
 
         if (this.saveToLocalStorage) {
-            this.serializedWorld.push({ type: "tree", coords: cell.coords });
+            this.serializedWorld.push({
+                type: "tree",
+                coords: cell.coords,
+                taskKey
+            });
             localStorage.setItem("map", JSON.stringify(this.serializedWorld));
         }
     }
 
-    private buildWater(cell: Cell) {
+    /*private buildWater(cell: Cell) {
         const waterPit = new WaterPit();
         waterPit.position.copy(cell.worldPos);
         this.castOnSphere(waterPit);
@@ -362,7 +373,7 @@ export class World extends Scene {
             this.serializedWorld.push({ type: "water", coords: cell.coords });
             localStorage.setItem("map", JSON.stringify(this.serializedWorld));
         }
-    }
+    }*/
     
     private updateFlowerCells(newTree: Cell) {
         const flowerRadius = 10;
@@ -574,15 +585,15 @@ export class World extends Scene {
         const { radius } = World.config;
 
         // check seeds
-        for (const seedTree of this.trees) {
-            const seed = seedTree.rayCast(screenRay);
-            if (seed) {
-                seedTree.removeSeed(seed);
-                this.state.seedCount++;
-                this.updateUI();
-                return;
-            }
-        }
+        // for (const seedTree of this.trees) {
+        //     const seed = seedTree.rayCast(screenRay);
+        //     if (seed) {
+        //         seedTree.removeSeed(seed);
+        //         this.state.seedCount++;
+        //         this.updateUI();
+        //         return;
+        //     }
+        // }
 
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
@@ -590,6 +601,7 @@ export class World extends Scene {
             if (this.selectedCell) {
                 const canPlant = !this.selectedCell.content && this.selectedCell.valid[this.state.action];
                 if (canPlant) {
+                    console.log(`Planting ${this.taskToPlant}`);
                     switch (this.state.action) {
                         case "flower":
                             this.buildFlower(this.selectedCell);
@@ -598,18 +610,37 @@ export class World extends Scene {
                             this.buildBush(this.selectedCell);
                             break;
                         case "tree":
-                            this.buildTree(this.selectedCell);
+                            if (this.taskToPlant) {
+                                this.buildTree(this.selectedCell, this.taskToPlant);
+                            }
                             break;
-                        case "water":
+                        /*case "water":
                             this.buildWater(this.selectedCell);
-                            break;
+                            break;*/
                     }
-                    this.updateUI();
+                    // this.updateUI();
+
+                    if (this.taskToPlant) {                       
+                        const taskList = document.getElementById("task-list") as HTMLElement;
+                        const taskElem = document.getElementById(`task-${this.taskToPlant}`) as HTMLElement;
+                        taskList.removeChild(taskElem);
+                        const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
+                        plantedIssues[this.taskToPlant] = true;
+                        localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
+
+                        if (taskList.children.length === 0) {
+                            document.getElementById("no-tasks")?.classList.remove("hidden");
+                        }
+                        
+                        this.taskToPlant = null;
+                    }
+
                     this.exitBuildMode();
-                }                
+                }
             } else {
                 if (this.cameraControls) {
                     this.player.moveTo(raycast.intersection1.clone());
+                    document.getElementById("task-panel")?.classList.add("hidden");
                 }
             }
         }
@@ -673,7 +704,7 @@ export class World extends Scene {
                 //     return;
                 // }
                 this.treeCells.forEach(cell => {
-                    cell.visible = !Boolean(cell.content) && cell.valid["tree"];
+                    cell.visible = !Boolean(cell.content); // && cell.valid["tree"];
                     if (cell.visible) {
                         cell.mesh.material = Terrain.materials.valid;
                     }
@@ -892,7 +923,7 @@ export class World extends Scene {
     }
 
     private onResize() {
-        setTimeout(() => this.hud.setSize(this.context.domElement.clientWidth, this.context.domElement.clientHeight), 10);        
+        // setTimeout(() => this.hud.setSize(this.context.domElement.clientWidth, this.context.domElement.clientHeight), 10);        
     }
 
     public update(deltaTime: number) {
@@ -905,8 +936,10 @@ export class World extends Scene {
         }
 
         this.player.update(deltaTime);
-        this.trees.forEach(t => t.update(deltaTime));
-        this.hud.update();
+        this.trees.forEach(t => {
+            t.update(deltaTime);            
+        });
+        // this.hud.update();
     }
 
     private onKeyDown(event: KeyboardEvent) {  
