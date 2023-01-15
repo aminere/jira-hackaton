@@ -57,6 +57,8 @@ export class World extends Scene {
 
     private serializedWorld: SerializedWorld = [];
     private saveToLocalStorage = true;
+    private taskLoading = false;
+    private tasksInitialized = false;
 
     private state: IState = {
         seedCount: 0,
@@ -156,6 +158,7 @@ export class World extends Scene {
         // this.hud.addMarker(tree, "Seed Tree");
 
         (document.getElementById("jira-logo") as HTMLButtonElement).onclick = () => this.openTasksPanel();
+        (document.getElementById("refresh") as HTMLButtonElement).onclick = () => this.refreshData();
 
         (document.getElementById("project-selector") as HTMLSelectElement).onchange = (e) => {
             console.log((e.target as any).value);
@@ -173,13 +176,93 @@ export class World extends Scene {
 
     private openTasksPanel() {
         const panel = (document.getElementById("task-panel") as HTMLElement);
-        if (panel.classList.contains("visible")) {
-            panel.classList.replace("visible", "hidden");
-        } else {
-            panel.classList.replace("hidden", "visible");
+        panel.classList.toggle("hidden");
+
+        if (this.taskLoading) {
+            return;
         }
 
+        if (!this.tasksInitialized) {
+            this.taskLoading = true;
+            // TODO load tasks from Jira
+            setTimeout(() => {
+                this.taskLoading = false;
+                this.tasksInitialized = true;
+                document.getElementById("task-loading")?.classList.add("hidden");
+                document.getElementById("tasks")?.classList.remove("hidden");
+                this.fillTaskList();
+            }, 1000);        
+        }
+    }
 
+    private refreshData() {
+        console.log("Refreshing data");
+        const taskList = document.getElementById("task-list") as HTMLElement;
+        taskList.innerHTML = "";
+        document.getElementById("task-loading")?.classList.remove("hidden");
+        document.getElementById("tasks")?.classList.add("hidden");
+
+        this.taskLoading = true;
+        setTimeout(() => {
+            this.taskLoading = false;            
+            document.getElementById("task-loading")?.classList.add("hidden");
+            document.getElementById("tasks")?.classList.remove("hidden");
+            this.fillTaskList();
+        }, 1000);  
+    }
+
+    private fillTaskList() {
+        const taskList = document.getElementById("task-list") as HTMLElement;
+        const tasks = [
+            {
+                key: "KEY-0",
+                summary: "This is a test summary, if it's too long it will show ellipsis",
+            },
+            {
+                key: "KEY-1",
+                summary: "This is a test summary, if it's too long it will show ellipsis",
+            },
+            {
+                key: "KEY-2",
+                summary: "This is a test summary, if it's too long it will show ellipsis",
+            }
+        ];
+
+        const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
+
+        tasks.forEach(task => {
+            if (task.key in plantedIssues) {
+                // task already planted
+                return;
+            }
+
+            const taskElem = document.createElement("div");
+            taskElem.id = `task-${task.key}`;
+            taskElem.classList.add("task");
+
+            const key = document.createElement("span");
+            key.innerText = task.key;
+            const summary = document.createElement("span");
+            summary.innerText = task.summary;
+            const button = document.createElement("button");
+            button.type = "button";
+            button.id = `button-${task.key}`;
+            const buttonText = document.createElement("span");
+            buttonText.innerText = "PLANT ME";
+            button.appendChild(buttonText);
+            button.onclick = () => {
+                console.log(`Planting ${task.key}`);
+                taskList.removeChild(taskElem);
+                const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
+                plantedIssues[task.key] = true;
+                localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
+            };
+
+            taskElem.appendChild(key);
+            taskElem.appendChild(summary);
+            taskElem.appendChild(button);            
+            taskList.appendChild(taskElem);
+        });
     }
 
     private castOnSphere(object: Object3D) {
