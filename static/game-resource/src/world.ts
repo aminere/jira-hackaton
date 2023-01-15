@@ -806,6 +806,8 @@ export class World extends Scene {
         
         if (event.code === "Escape") {
             this.exitBuildMode();
+            event.preventDefault();
+            event.stopPropagation();
         }
     } 
 }
