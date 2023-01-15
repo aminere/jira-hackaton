@@ -160,9 +160,9 @@ export class World extends Scene {
         (document.getElementById("jira-logo") as HTMLButtonElement).onclick = () => this.openTasksPanel();
         (document.getElementById("refresh") as HTMLButtonElement).onclick = () => this.refreshData();
 
-        (document.getElementById("project-selector") as HTMLSelectElement).onchange = (e) => {
-            console.log((e.target as any).value);
-        };
+        // (document.getElementById("project-selector") as HTMLSelectElement).onchange = (e) => {
+        //     console.log((e.target as any).value);
+        // };
 
         // const buildFlower = document.getElementById("buildFlower") as HTMLButtonElement;
         // buildFlower.onclick = () => this.enterBuildMode("flower");
@@ -230,6 +230,7 @@ export class World extends Scene {
 
         const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
 
+        let availableTasks = 0;
         tasks.forEach(task => {
             if (task.key in plantedIssues) {
                 // task already planted
@@ -256,13 +257,24 @@ export class World extends Scene {
                 const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
                 plantedIssues[task.key] = true;
                 localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
+
+                if (taskList.children.length === 0) {
+                    document.getElementById("no-tasks")?.classList.remove("hidden");
+                }
             };
 
             taskElem.appendChild(key);
             taskElem.appendChild(summary);
             taskElem.appendChild(button);            
             taskList.appendChild(taskElem);
+            ++availableTasks;
         });
+
+        if (availableTasks === 0) {
+            document.getElementById("no-tasks")?.classList.remove("hidden");
+        } else {
+            document.getElementById("no-tasks")?.classList.add("hidden");
+        }
     }
 
     private castOnSphere(object: Object3D) {

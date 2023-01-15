@@ -162,39 +162,18 @@ button:active {
     width: 100%;
 }
 
-/* 
-img {
-    width: 4vmax;
-    max-width: 100%;
-}
-
-.counters {   
+#no-tasks {
     position: absolute;
     left: 0;
     top: 0;
     display: flex;
-}
-
-.counter {    
-    display: flex;
-    gap: 2vmin;
-    margin: 2vmin;
-    color: white;
-    text-shadow: 1px 1px black;
-    font-size: 2.5vmax;
     align-items: center;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    pointer-events: none;
 }
-
-.builders {
-    position: fixed;
-    right: 0;
-    top: 0;
-    display: flex;
-    flex-direction: row;
-    gap: 2vmin;
-    margin: 2vmin;
-}
- */
 
 .tooltip {
     position: relative;

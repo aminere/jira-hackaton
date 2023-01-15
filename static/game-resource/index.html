@@ -24,19 +24,23 @@
         </div>
         <div id="tasks" class="tasks hidden">
           <div class="tasks-bar">
-            <div>
+            <!-- <div>
               <span>Project</span>
               <select id="project-selector">
                 <option value="0">All</option>
                 <option value="1">Dummy Project</option>
               </select>
-            </div>
+            </div> -->
             <button class="tooltip" id="refresh" type="button">
               <img src="ui/refresh.png" />
               <span class="tooltiptext">Refresh Project Data</span>
             </button>
           </div>
           <div id="task-list">            
+          </div>
+          <div id="no-tasks" class="hidden">
+            <div>There are no issues available for planting.</div>
+            <div>Refresh the project data to retrieve more issues.</div>             
           </div>
         </div>
       </div>
