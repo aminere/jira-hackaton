@@ -1,5 +1,5 @@
 
-import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, TextureLoader, Vector3, FrontSide, MeshBasicMaterial, Color, Group, MeshPhongMaterial } from "three";
+import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, TextureLoader, Vector3, MeshPhongMaterial, Texture } from "three";
 import { Collision } from "./collision";
 
 import { IContext, ISeed } from "./types";
@@ -25,6 +25,12 @@ export class SeedTree extends Object3D {
     public loader!: HTMLElement;
     public refresh!: HTMLElement;
     private inFrontOfCamera = false;
+
+    private static models: Record<string, Object3D> = {};
+    private static currentModel = 0;
+    private static modelCount = 5;
+    private static scales = [1, 1.5, 1, 1, 2];
+    private static texture: Texture;
 
     private static config = {
         seedAngularSpeed: 30,
@@ -121,18 +127,31 @@ export class SeedTree extends Object3D {
     }
 
     private async load() {
-
-        const texture = await new TextureLoader().loadAsync("assets/tree-texture.png");
-        const obj2 = await Loaders.load("assets/Tree_01.obj", "assets/Tree_01.mtl");        
-        this.add(obj2);        
-
-        obj2.traverse(c => {
-            c.castShadow = true;
-            if ((c as Mesh).isMesh) {
-                const mesh = c as Mesh;
-                (mesh.material as MeshPhongMaterial).map = texture;
+    
+        const currentModelIndex = SeedTree.currentModel;
+        SeedTree.currentModel = (currentModelIndex + 1) % SeedTree.modelCount;
+        let currentModel = SeedTree.models[currentModelIndex];        
+        if (!currentModel) {
+            if (!SeedTree.texture) {
+                SeedTree.texture = await new TextureLoader().loadAsync("assets/tree-texture.png");
             }
-        });
+
+            const model = await Loaders.load(`assets/Tree_0${currentModelIndex + 1}.obj`, `assets/Tree_0${currentModelIndex + 1}.mtl`);
+            currentModel = model;
+
+            model.scale.setScalar(SeedTree.scales[currentModelIndex]);
+            model.traverse(c => {
+                c.castShadow = true;
+                if ((c as Mesh).isMesh) {
+                    const mesh = c as Mesh;
+                    (mesh.material as MeshPhongMaterial).map = SeedTree.texture;
+                }
+            });
+
+            SeedTree.models[currentModelIndex] = model;            
+        }        
+        
+        this.add(currentModel.clone());        
 
         /*const obj = await new GLTFLoader().loadAsync("assets/tree.glb");
         const alphaMap = await new TextureLoader().load("assets/foliage_alpha3.png");

@@ -179,7 +179,16 @@ button:active {
     gap: 2vmin;
     margin: 1vmin 0;
     width: 100%;
-    min-height: 5vmin
+    min-height: 5vmin;
+    overflow: visible;
+}
+
+.task-icons {
+
+}
+
+.task-icons img {
+    height: 6vmin;
 }
 
 #no-tasks {

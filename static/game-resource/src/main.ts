@@ -88,7 +88,9 @@ Fonts.preload()
     "ui/jira-logo.png",    
     "ui/jira-icon.png",
     "ui/refresh.png",
-    "ui/close.svg"
+    "ui/close.svg",
+    "ui/tree.svg",
+    "ui/flower.svg",
   ]))
   .then(() => forgeInit())
   .then(() => (document.getElementById("ui") as HTMLElement).classList.remove("hidden"));

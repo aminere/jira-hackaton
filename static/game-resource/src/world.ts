@@ -14,7 +14,6 @@ import { IContext, ITask } from './types';
 import { SeedTree } from './seed-tree';
 import { Collision } from './collision';
 import { Utils } from './utils';
-// import { WaterPit } from './water-pit';
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import type { Cell } from './cell';
@@ -38,10 +37,8 @@ export class World extends Scene {
     private player!: Player;
     private cameraControls!: CameraControls;
     private trees: SeedTree[] = [];
-    // private waterPits: WaterPit[] = [];
     private context: IContext;
     private cursor: string | null = null;
-    // private hud: HUD;
     private terrain: Terrain;    
     private selectedCell: Cell | null = null; 
 
@@ -99,11 +96,7 @@ export class World extends Scene {
         light.target.position.set(0, 0, 0);
         light.position.set(0, 10, 0);
         this.player.root.add(light);
-        this.player.root.add(light.target);
-
-        // const light2 = new DirectionalLight(0xffffff, 1); 
-        // light2.position.set(-radius, -radius, -radius);
-        // this.add(light2);
+        this.player.root.add(light.target);        
 
         if (true) {
             this.cameraControls = new CameraControls({ context, target: this.player });
@@ -135,12 +128,7 @@ export class World extends Scene {
                 // case "water": this.buildWater(this.terrain.getCell(coords)); break;
             // }
         });
-
-        // cellResolution = 12
-        // this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution / 2 - 1, 4)));
-        // this.buildWater(this.terrain.getCell(new Vector3(0, cellResolution / 2 + 2, 4)))
-        // this.buildTree(this.terrain.getCell(new Vector3(0, cellResolution - 1, 4)));
-
+       
         this.load();
 
         this.onClick = this.onClick.bind(this);
@@ -158,28 +146,9 @@ export class World extends Scene {
 
         this.onIssueLoaded = this.onIssueLoaded.bind(this);
         this.onIssuesLoaded = this.onIssuesLoaded.bind(this);
-
-        // const hudCanvas = document.getElementById("hud") as HTMLCanvasElement;
-        // hudCanvas.width = context.domElement.clientWidth;
-        // hudCanvas.height = context.domElement.clientHeight;
-        // this.hud = new HUD(hudCanvas, context);
-        // this.hud.addMarker(tree, "Seed Tree");
-
+        
         (document.getElementById("jira-logo") as HTMLButtonElement).onclick = () => this.openTasksPanel();
         (document.getElementById("refresh") as HTMLButtonElement).onclick = () => this.refreshData();
-
-        // (document.getElementById("project-selector") as HTMLSelectElement).onchange = (e) => {
-        //     console.log((e.target as any).value);
-        // };
-
-        // const buildFlower = document.getElementById("buildFlower") as HTMLButtonElement;
-        // buildFlower.onclick = () => this.enterBuildMode("flower");
-        // const buildBush = document.getElementById("buildBush") as HTMLButtonElement;
-        // buildBush.onclick = () => this.enterBuildMode("bush");
-        // const buildTree = document.getElementById("buildTree") as HTMLButtonElement;
-        // buildTree.onclick = () => this.enterBuildMode("tree");
-        // const buildWater = document.getElementById("buildWater") as HTMLButtonElement;
-        // buildWater.onclick =() => this.enterBuildMode("water");
     }
 
     private onIssuesLoaded(event: THREE.Event) {       
@@ -221,6 +190,53 @@ export class World extends Scene {
         this.dispatchEvent({ type: "loadIssues" });        
     }
 
+    private addTaskToList(task: ITask, taskList: HTMLElement) {
+        const taskElem = document.createElement("div");
+        taskElem.id = `task-${task.key}`;
+        taskElem.classList.add("task");
+
+        const key = document.createElement("span");
+        key.innerText = task.key;
+        const summary = document.createElement("span");
+        summary.innerText = task.summary;
+
+        /*const button = document.createElement("button");
+        button.type = "button";
+        button.id = `button-${task.key}`;
+        const buttonText = document.createElement("span");
+        buttonText.innerText = "PLANT ME";
+        button.appendChild(buttonText);
+        button.onclick = () => {      
+            document.getElementById("task-panel")?.classList.add("hidden");
+            this.taskToPlant = task;
+            this.enterBuildMode("tree");
+        };*/
+
+        const taskIcons = document.createElement("div");
+        taskIcons.classList.add("task-icons");            
+        const buttonTree = document.createElement("button");
+        buttonTree.classList.add("tooltip");
+        buttonTree.type = "button";    
+        buttonTree.onclick = () => {
+            document.getElementById("task-panel")?.classList.add("hidden");
+            this.taskToPlant = task;
+            this.enterBuildMode("tree");
+        };    
+        const buttonTreeIcon = document.createElement("img");
+        buttonTreeIcon.src = "ui/tree.svg";
+        // const buttonTreeTooltip = document.createElement("span");
+        // buttonTreeTooltip.classList.add("tooltiptext");
+        // buttonTreeTooltip.innerText = "Plant Tree";        
+        buttonTree.appendChild(buttonTreeIcon);
+        // buttonTree.appendChild(buttonTreeTooltip);
+        taskIcons.appendChild(buttonTree);
+
+        taskElem.appendChild(key);
+        taskElem.appendChild(summary);
+        taskElem.appendChild(taskIcons);
+        taskList.appendChild(taskElem);
+    }
+
     private fillTaskList(tasks: ITask[]) {
         const taskList = document.getElementById("task-list") as HTMLElement;        
         const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
@@ -232,30 +248,7 @@ export class World extends Scene {
                 return;
             }
 
-            const taskElem = document.createElement("div");
-            taskElem.id = `task-${task.key}`;
-            taskElem.classList.add("task");
-
-            const key = document.createElement("span");
-            key.innerText = task.key;
-            const summary = document.createElement("span");
-            summary.innerText = task.summary;
-            const button = document.createElement("button");
-            button.type = "button";
-            button.id = `button-${task.key}`;
-            const buttonText = document.createElement("span");
-            buttonText.innerText = "PLANT ME";
-            button.appendChild(buttonText);
-            button.onclick = () => {      
-                document.getElementById("task-panel")?.classList.add("hidden");
-                this.taskToPlant = task;
-                this.enterBuildMode("tree");
-            };
-
-            taskElem.appendChild(key);
-            taskElem.appendChild(summary);
-            taskElem.appendChild(button);            
-            taskList.appendChild(taskElem);
+            this.addTaskToList(task, taskList);            
             ++availableTasks;
         });
 
@@ -391,6 +384,10 @@ export class World extends Scene {
             localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
 
             container.parentNode?.removeChild(container);
+
+            const taskList = document.getElementById("task-list") as HTMLElement;
+            this.addTaskToList(task, taskList);
+            document.getElementById("no-tasks")?.classList.add("hidden");
         };
 
         const closeIcon = document.createElement("img");
@@ -433,241 +430,7 @@ export class World extends Scene {
         cell.content = tree;
         this.add(tree);
         this.trees.push(tree);
-
-        // this.updateFlowerCells(cell); // flowers at a radius from trees
-        // if (cell.parentPits) {
-        //     // disable other cells that are in the area so that trees are not too close to each other
-        //     const [pit1, pit2] = cell.parentPits as [WaterPit, WaterPit];
-        //     pit1.cellsPerNeighbor.get(pit2)?.forEach(c => {
-        //         c.valid["tree"] = false;
-        //     });
-        // }        
     }
-
-    /*private buildWater(cell: Cell) {
-        const waterPit = new WaterPit();
-        waterPit.position.copy(cell.worldPos);
-        this.castOnSphere(waterPit);
-        cell.content = waterPit;
-        this.add(waterPit);
-        
-        if (this.waterPits.length === 0) {
-            // init water cells
-            this.waterCells = [];
-            this.terrain.faces.forEach(face => {
-                face.children.forEach(c => {
-                    const _cell = c as Cell;
-                    _cell.valid["water"] = !Boolean(_cell.content);
-                    this.waterCells.push(_cell);
-                });
-            });
-        }
-
-        this.waterPits.push(waterPit);        
-
-        this.updateBushCells(cell); // bushes at a radius from water
-        this.updateWaterCells(cell); // water cells at a radius from each other
-        this.updateTreeCells(cell); // trees in between water cells
-
-        if (this.saveToLocalStorage) {
-            this.serializedWorld.push({ type: "water", coords: cell.coords });
-            localStorage.setItem("map", JSON.stringify(this.serializedWorld));
-        }
-    }*/
-    
-    /*private updateFlowerCells(newTree: Cell) {
-        const flowerRadius = 10;
-        const { radius, cellResolution } = World.config;
-        const cellSize = radius * 2 / cellResolution;
-        
-        const cells: Cell[] = [];
-
-        const [normal, right, forward, startPos, currentPos, cellCoords, planeIntersection, lineEnd] = Utils.pool.vec3;
-        normal.copy(newTree.worldPos).normalize();
-        Utils.getBasisFromNormal(normal, right, forward);
-        startPos.copy(newTree.worldPos)
-            .addScaledVector(right, flowerRadius)
-            .addScaledVector(forward, flowerRadius);             
-        
-        currentPos.copy(startPos);
-        const stepSize = cellSize / 2;
-        const steps = Math.round((flowerRadius * 2) / stepSize);
-        const cellPos = new Vector3();
-        const { valid, invalid } = Terrain.materials;
-        for (let i = 0; i <= steps; i++) {
-            for (let j = 0; j <= steps; j++) {
-
-                cellPos.copy(currentPos).normalize().multiplyScalar(radius);
-
-                if (this.getCellCoordsFromSpherePos(cellPos, cellCoords, planeIntersection, lineEnd)) {
-                    const cell = this.terrain.getCell(cellCoords);
-                    const checked = cell.checked["flower"];
-                    if (!checked) {
-                        cells.push(cell);
-                        cell.mesh.material = cell.content ? invalid : valid;
-                        cell.checked["flower"] = true;
-                        cell.valid["flower"] = !Boolean(cell.content);
-                    }
-                }
-
-                currentPos.addScaledVector(right, -stepSize);
-            }
-            currentPos.copy(startPos).addScaledVector(forward, -stepSize * (i + 1));
-        }
-
-        this.flowerCells = [...this.flowerCells, ...cells];
-    }*/
-
-    /*private updateBushCells(newWater: Cell) {
-        const bushRadius = 8;
-        const { radius, cellResolution } = World.config;
-        const cellSize = radius * 2 / cellResolution;
-        
-        const cells: Cell[] = [];
-
-        const [normal, right, forward, startPos, currentPos, cellCoords, planeIntersection, lineEnd] = Utils.pool.vec3;
-        normal.copy(newWater.worldPos).normalize();
-        Utils.getBasisFromNormal(normal, right, forward);
-        startPos.copy(newWater.worldPos)
-            .addScaledVector(right, bushRadius)
-            .addScaledVector(forward, bushRadius);             
-        
-        currentPos.copy(startPos);
-        const stepSize = cellSize / 2;
-        const steps = Math.round((bushRadius * 2) / stepSize);
-        const cellPos = new Vector3();
-        const { valid, invalid } = Terrain.materials;
-        for (let i = 0; i <= steps; i++) {
-            for (let j = 0; j <= steps; j++) {
-
-                cellPos.copy(currentPos).normalize().multiplyScalar(radius);
-
-                if (this.getCellCoordsFromSpherePos(cellPos, cellCoords, planeIntersection, lineEnd)) {
-                    const cell = this.terrain.getCell(cellCoords);
-                    const checked = cell.checked["bush"];
-                    if (!checked) {
-                        cells.push(cell);
-                        cell.mesh.material = cell.content ? invalid : valid;
-                        cell.checked["bush"] = true;
-                        cell.valid["bush"] = !Boolean(cell.content);
-                    }
-                }
-
-                currentPos.addScaledVector(right, -stepSize);
-            }
-            currentPos.copy(startPos).addScaledVector(forward, -stepSize * (i + 1));
-        }
-
-        this.bushCells = [...this.bushCells, ...cells];
-    }*/
-
-    /*private updateWaterCells(newWater: Cell) {
-        const waterRadius = 8;
-        const { radius, cellResolution } = World.config;
-        const cellSize = radius * 2 / cellResolution;        
-
-        const [normal, right, forward, startPos, currentPos, cellCoords, planeIntersection, lineEnd] = Utils.pool.vec3;
-        normal.copy(newWater.worldPos).normalize();
-        Utils.getBasisFromNormal(normal, right, forward);
-        startPos.copy(newWater.worldPos)
-            .addScaledVector(right, waterRadius)
-            .addScaledVector(forward, waterRadius);
-        
-        currentPos.copy(startPos);
-        const stepSize = cellSize / 2;
-        const steps = Math.round((waterRadius * 2) / stepSize);
-        const cellPos = new Vector3();
-        for (let i = 0; i <= steps; i++) {
-            for (let j = 0; j <= steps; j++) {
-
-                cellPos.copy(currentPos).normalize().multiplyScalar(radius);
-
-                if (this.getCellCoordsFromSpherePos(cellPos, cellCoords, planeIntersection, lineEnd)) {
-                    const cell = this.terrain.getCell(cellCoords);
-                    const checked = cell.checked["water"];
-                    if (!checked) {                        
-                        cell.checked["water"] = true;
-                        cell.valid["water"] = false;
-                    }
-                }
-
-                currentPos.addScaledVector(right, -stepSize);
-            }
-            currentPos.copy(startPos).addScaledVector(forward, -stepSize * (i + 1));
-        }
-    }*/
-
-    /*private updateTreeCells(newWater: Cell) {
-        if (this.waterPits.length < 2) {
-            return; // trees require at least 2 water pits
-        }
-
-        const { radius, cellResolution } = World.config;
-        const cellSize = radius * 2 / cellResolution;
-        const maxAngleBetweenNeighbors = 30;
-        const waterRadius = 2;
-
-        const [pit1Pos, pit2Pos, average, normal, right, forward, startPos, currentPos, cellCoords, planeIntersection, lineEnd] = Utils.pool.vec3;
-        const newPit = newWater.content as WaterPit;
-        const cellPos = new Vector3(); 
-        const cells: Cell[] = [];       
-        const { valid, invalid } = Terrain.materials;
-        this.waterPits.forEach(pit => {
-            if (pit === newPit) {
-                return;
-            }
-            
-            const angle = Math.acos(pit1Pos.copy(pit.position).normalize().dot(pit2Pos.copy(newPit.position).normalize())) * MathUtils.RAD2DEG;
-            if (angle < maxAngleBetweenNeighbors) {
-                normal.lerpVectors(pit1Pos, pit2Pos, 0.5).normalize();
-                average.copy(normal).multiplyScalar(radius);               
-
-                Utils.getBasisFromNormal(normal, right, forward);
-                startPos.copy(average)
-                    .addScaledVector(right, waterRadius)
-                    .addScaledVector(forward, waterRadius);
-                
-                currentPos.copy(startPos);
-                const stepSize = cellSize / 2;
-                const steps = Math.round((waterRadius * 2) / stepSize);
-                for (let i = 0; i <= steps; i++) {
-                    for (let j = 0; j <= steps; j++) {
-        
-                        cellPos.copy(currentPos).normalize().multiplyScalar(radius);
-        
-                        if (this.getCellCoordsFromSpherePos(cellPos, cellCoords, planeIntersection, lineEnd)) {
-                            const cell = this.terrain.getCell(cellCoords);
-                            const checked = cell.checked["tree"];
-                            if (!checked) {        
-                                cells.push(cell);
-                                cell.mesh.material = cell.content ? invalid : valid;                
-                                cell.checked["tree"] = true;
-                                cell.valid["tree"] = true;
-
-                                // update cell per pit info
-                                cell.parentPits = [pit, newPit];
-                                if (!pit.cellsPerNeighbor.has(newPit)) {
-                                    pit.cellsPerNeighbor.set(newPit, [cell]);
-                                } else {
-                                    pit.cellsPerNeighbor.get(newPit)?.push(cell);
-                                }
-                                if (!newPit.cellsPerNeighbor.has(pit)) {
-                                    newPit.cellsPerNeighbor.set(pit, [cell]);
-                                } else {
-                                    newPit.cellsPerNeighbor.get(pit)?.push(cell);
-                                }
-                            }
-                        }
-        
-                        currentPos.addScaledVector(right, -stepSize);
-                    }
-                    currentPos.copy(startPos).addScaledVector(forward, -stepSize * (i + 1));
-                }
-            }
-        });
-
-        this.treeCells = [...this.treeCells, ...cells];
-    }*/
 
     public dispose() {
         this.context.domElement.removeEventListener('click', this.onClick);
@@ -683,18 +446,6 @@ export class World extends Scene {
         Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
 
         const { radius } = World.config;
-
-        // check seeds
-        // for (const seedTree of this.trees) {
-        //     const seed = seedTree.rayCast(screenRay);
-        //     if (seed) {
-        //         seedTree.removeSeed(seed);
-        //         this.state.seedCount++;
-        //         this.updateUI();
-        //         return;
-        //     }
-        // }
-
         const raycast = Collision.rayCastOnSphere(screenRay, Utils.vec3.zero, radius);
         if (raycast) {
 
@@ -713,12 +464,8 @@ export class World extends Scene {
                             if (this.taskToPlant) {
                                 this.buildTree(this.selectedCell, this.taskToPlant);
                             }
-                            break;
-                        /*case "water":
-                            this.buildWater(this.selectedCell);
-                            break;*/
+                            break;                        
                     }
-                    // this.updateUI();
 
                     if (this.taskToPlant) {                       
                         const taskList = document.getElementById("task-list") as HTMLElement;
@@ -757,25 +504,7 @@ export class World extends Scene {
 
     private enterBuildMode(action: Action) {
 
-        this.exitBuildMode();
-
-        // const checkSeeds = () => {
-        //     if (this.state.seedCount < 1) {
-        //         // TODO: show message
-        //         console.log("not enough seeds");
-        //         return false;
-        //    }
-        //    return true;
-        // };
-
-        // const checkCoins = (count: number) => {
-        //     if (this.state.coins < count) {
-        //         // TODO: show message
-        //         console.log("not enough coins");
-        //         return false;
-        //    }
-        //    return true;
-        // };
+        this.exitBuildMode();       
 
         switch (action) {
             case "flower":
@@ -1048,7 +777,6 @@ export class World extends Scene {
         this.trees.forEach(t => {
             t.update();
         });
-        // this.hud.update();
     }
 
     private onKeyDown(event: KeyboardEvent) {  
