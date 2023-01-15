@@ -359,7 +359,17 @@ export class World extends Scene {
         close.type = "button";
 
         close.onclick = () => {
+            // remove tree
+            const _tree = cell.content as SeedTree;
+            this.trees.splice(this.trees.indexOf(_tree), 1);
+            this.remove(_tree);
+            cell.content = null;
 
+            const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
+            delete plantedIssues[task.key];
+            localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
+
+            container.parentNode?.removeChild(container);
         };
 
         const closeIcon = document.createElement("img");
