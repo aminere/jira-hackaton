@@ -1,5 +1,5 @@
 
-import { Object3D, Mesh, SphereGeometry, Vector3, MathUtils, MeshBasicMaterial, Clock } from "three";
+import { Object3D, Mesh, SphereGeometry, Vector3, MathUtils, MeshBasicMaterial, Clock, Group } from "three";
 import { Arm } from "./arm";
 import { IContext, ISeed } from "./types";
 import { Utils } from "./utils";
@@ -34,7 +34,7 @@ export class Player extends Object3D {
         stepLength: .7,
         stepHeight: .4,
         armBoneLengths: [.6, 1.4],        
-        armRanges: [new Vector3(0.6, .3, .5), new Vector3(1.5, 0, 1)],
+        armRanges: [new Vector3(0.6, .3, .3), new Vector3(1.5, 0, 1)],
         gravity: 50,
         jumpForce: 15,
         wiggle: {
@@ -97,12 +97,16 @@ export class Player extends Object3D {
     }
 
     private async load() {
-        const obj = await Loaders.load("assets/spider-body.obj", "assets/spider-body.mtl");
+        const body = await Loaders.load("assets/spider-body.obj", "assets/spider-body.mtl");
+        const head = await Loaders.load("assets/spider-head.obj", "assets/spider-head.mtl");
+        const mesh = new Group();
+        mesh.add(body);
+        mesh.add(head);
         // const texture = await new TextureLoader().load("assets/spider.png");
-        obj.scale.setScalar(.6);        
+        mesh.scale.setScalar(.6);        
         // obj.scale.y = 1;
         // obj.traverse(child => child.castShadow = true);
-        this._body.add(obj);
+        this._body.add(mesh);        
         this._body.traverse(c => {
             c.castShadow = true;
             // const mesh = (c as Mesh);

@@ -1,13 +1,10 @@
-# Blender MTL File: 'None'
-# Material Count: 1
 
-newmtl Material_#191
-Ns 0.000000
-Ka 1.000000 1.000000 1.000000
-Kd 1.000000 1.000000 1.000000
-Ks 1.000000 1.000000 1.000000
-Ke 0.000000 0.000000 0.000000
-Ni 1.450000
-d 1.000000
+newmtl Material #191
+Ka  1.0 1.0 1.0
+Kd  1.0 1.0 1.0
+Ks  1.0 1.0 1.0
+d  1.0
+Ns  0.0
 illum 2
 map_Kd spider.png
+

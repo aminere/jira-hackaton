@@ -21,7 +21,7 @@ export class CameraControls {
 
     private yaw = 0;
     private touchInside = true;
-    private zoom = 0;
+    private zoom = 0.15;
 
     private config = {
         distFromTarget: 2.3,
@@ -50,6 +50,10 @@ export class CameraControls {
         document.addEventListener('pointerover', this.onPointerOver);
         document.addEventListener('pointerleave', this.onPointerLeave);
         document.addEventListener('wheel', this.onWheel);
+
+        this.config.distFromTarget = MathUtils.lerp(2.3, 5, this.zoom);
+        this.config.heightOffset = MathUtils.lerp(8.3, 30, this.zoom);
+        this.config.lookAtOffsetZ = MathUtils.lerp(4.5, 0, this.zoom);
     }
 
     public dispose() {

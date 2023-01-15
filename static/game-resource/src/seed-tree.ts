@@ -135,9 +135,9 @@ export class SeedTree extends Object3D {
         SeedTree.currentModel = (currentModelIndex + 1) % SeedTree.modelCount;
         let currentModel = SeedTree.models[currentModelIndex];        
         if (!currentModel) {
-            if (!SeedTree.texture) {
-                SeedTree.texture = await new TextureLoader().loadAsync("assets/tree-texture.png");
-            }
+            // if (!SeedTree.texture) {
+            //     SeedTree.texture = await new TextureLoader().loadAsync("assets/tree-texture.png");
+            // }
 
             const model = await Loaders.load(`assets/Tree_0${currentModelIndex + 1}.obj`, `assets/Tree_0${currentModelIndex + 1}.mtl`);
             currentModel = model;
@@ -145,10 +145,10 @@ export class SeedTree extends Object3D {
             model.scale.setScalar(SeedTree.scales[currentModelIndex]);
             model.traverse(c => {
                 c.castShadow = true;
-                if ((c as Mesh).isMesh) {
-                    const mesh = c as Mesh;
-                    (mesh.material as MeshPhongMaterial).map = SeedTree.texture;
-                }
+                // if ((c as Mesh).isMesh) {
+                //     const mesh = c as Mesh;
+                //     (mesh.material as MeshPhongMaterial).map = SeedTree.texture;
+                // }
             });
 
             SeedTree.models[currentModelIndex] = model;
