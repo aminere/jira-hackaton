@@ -314,7 +314,12 @@ export class World extends Scene {
     private buildTree(cell: Cell, taskKey: string) {
 
         const hud = document.getElementById("hud") as HTMLElement;
+
+        // const container = document.createElement("div");
+        // container.style.display = "none";
+
         const icon = document.createElement("img");
+        icon.style.display = "none";
         icon.src = "ui/jira-icon.png";
         hud.appendChild(icon);
 

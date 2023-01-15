@@ -19,6 +19,7 @@ export class SeedTree extends Object3D {
     private foliageMaterial!: CustomShaderMaterial;
 
     private icon!: HTMLElement;
+    private inFrontOfCamera = false;
 
     private static config = {
         seedAngularSpeed: 30,
@@ -71,10 +72,23 @@ export class SeedTree extends Object3D {
         }
 
         // update HUD
-        const [worldPos, screenPos] = Utils.pool.vec3;
-        Utils.getScreenPosition(this.getWorldPosition(worldPos), this.context, screenPos);
-        this.icon.style.left = `calc(${screenPos.x}px - 4vmin)`;
-        this.icon.style.top = `calc(${screenPos.y}px - 4vmin)`;
+        const [worldPos, screenPos, normalizedPos] = Utils.pool.vec3;
+        Utils.getScreenPosition(this.getWorldPosition(worldPos), this.context, screenPos, normalizedPos);
+
+        const inFrontOfCamera = Math.abs(normalizedPos.x) < 0.3 && Math.abs(normalizedPos.y) < 0.3;
+        if (inFrontOfCamera !== this.inFrontOfCamera) {
+            if (inFrontOfCamera) {
+                this.icon.style.display = 'block';
+            } else {
+                this.icon.style.display = 'none';
+            }
+            this.inFrontOfCamera = inFrontOfCamera;
+        }
+
+        if (inFrontOfCamera) {
+            this.icon.style.left = `calc(${screenPos.x}px - 6vmin)`;
+            this.icon.style.top = `calc(${screenPos.y}px - 6vmin)`;
+        }
     }
 
     public rayCast(ray: Ray) {

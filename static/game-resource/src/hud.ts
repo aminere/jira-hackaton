@@ -34,13 +34,13 @@ export class HUD {
     public update() {        
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        const [worldPos] = Utils.pool.vec3;
+        /*const [worldPos] = Utils.pool.vec3;
         for (const marker of this.markers) {
             const screenPos = new Vector3();
             Utils.getScreenPosition(marker.target.getWorldPosition(worldPos), this.context, screenPos);
             this.ctx.strokeText(marker.name, screenPos.x, screenPos.y);
             this.ctx.fillText(marker.name, screenPos.x, screenPos.y);
-        }
+        }*/
     }
 
     private initContext() {

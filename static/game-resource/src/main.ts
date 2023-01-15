@@ -23,7 +23,8 @@ Fonts.preload()
   .then(() => Images.preload([
     "ui/jira-logo.png",    
     "ui/jira-icon.png",
-    "ui/refresh.png"
+    "ui/refresh.png",
+    "ui/close.svg"
   ]))
   .then(() => (document.getElementById("ui") as HTMLElement).style.display = "flex");
 

@@ -57,13 +57,13 @@ export class Utils {
         return ray.set(origin, direction);
     }
 
-    public static getScreenPosition(worldPos: Vector3, context: IContext, screenPos: Vector3) {
+    public static getScreenPosition(worldPos: Vector3, context: IContext, screenPos: Vector3, normalizedPos: Vector3) {
         const { clientWidth, clientHeight } = context.domElement;
-        screenPos
+        normalizedPos
             .copy(worldPos)
             .project(context.camera);
-        screenPos.x = (screenPos.x + 1) / 2 * clientWidth;
-        screenPos.y = -(screenPos.y - 1) / 2 * clientHeight;
+        screenPos.x = (normalizedPos.x + 1) / 2 * clientWidth;
+        screenPos.y = -(normalizedPos.y - 1) / 2 * clientHeight;
         return screenPos;
     }
 

@@ -38,7 +38,7 @@ body {
 }
 
 #hud > img {
-    width: 8vmin;
+    width: 12vmin;
     position: absolute;
     cursor: pointer;
     pointer-events: all;
@@ -210,3 +210,23 @@ button:active {
     visibility: visible;
 }
 
+.tree-panel {
+    pointer-events: all;
+    background-color: #3131315d;
+    display: flex;
+    flex-direction: column;
+    width: 30vmin;
+    gap: 2vmin;
+    align-items: center;
+    text-align: center;
+    border-radius: 2vmin;
+    padding: 2vmin;
+    position: absolute;
+    left: 30px;
+    top: 30px;
+}
+
+.tree-panel img {
+    height: 6vmin;
+    margin: 1vmin;
+}
