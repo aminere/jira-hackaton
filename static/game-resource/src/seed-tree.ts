@@ -10,6 +10,7 @@ import { IContext, ISeed } from "./types";
 
 import { Utils } from "./utils";
 import { Loaders } from "./loaders";
+import gsap from "gsap";
 
 export class SeedTree extends Object3D {
 
@@ -90,21 +91,23 @@ export class SeedTree extends Object3D {
         const [worldPos, screenPos, normalizedPos] = Utils.pool.vec3;
         Utils.getScreenPosition(this.getWorldPosition(worldPos), this.context, screenPos, normalizedPos);
 
-        const inFrontOfCamera = Math.abs(normalizedPos.x) < 0.3 && Math.abs(normalizedPos.y) < 0.3;
-        if (inFrontOfCamera !== this.inFrontOfCamera) {
+        const inFrontOfCamera = Math.abs(normalizedPos.x) < 0.5 && Math.abs(normalizedPos.y) < 0.5;
+        // if (inFrontOfCamera !== this.inFrontOfCamera) {
             if (inFrontOfCamera) {
-                this.container.classList.remove('hidden');
+                if (this.loader.classList.contains('hidden')) {
+                    this.icon.classList.remove('hidden');
+                }
             } else {
-                this.container.classList.add('hidden');
+                this.icon.classList.add('hidden');
                 this.panel.classList.add('hidden');
             }
-            this.inFrontOfCamera = inFrontOfCamera;
-        }
+            // this.inFrontOfCamera = inFrontOfCamera;
+        // }
 
-        if (inFrontOfCamera) {
+        // if (inFrontOfCamera) {
             this.container.style.left = `calc(${screenPos.x}px - 6vmin)`;
             this.container.style.top = `calc(${screenPos.y}px - 6vmin)`;
-        }
+        // }
     }
 
     public rayCast(ray: Ray) {
@@ -148,10 +151,17 @@ export class SeedTree extends Object3D {
                 }
             });
 
-            SeedTree.models[currentModelIndex] = model;            
+            SeedTree.models[currentModelIndex] = model;
+            // await new Promise(resolve => setTimeout(resolve, 2000));
         }        
         
-        this.add(currentModel.clone());        
+        const model = currentModel.clone();
+        model.position.y = 20;
+        gsap.to(model.position, { y: 0, duration: .5 });
+
+        this.add(model);
+        this.loader.classList.add('hidden');
+        this.icon.classList.remove('hidden');
 
         /*const obj = await new GLTFLoader().loadAsync("assets/tree.glb");
         const alphaMap = await new TextureLoader().load("assets/foliage_alpha3.png");

@@ -323,7 +323,7 @@ export class World extends Scene {
         const hud = document.getElementById("hud") as HTMLElement;
 
         const container = document.createElement("div");
-        container.classList.add("tree-container", "hidden");
+        container.classList.add("tree-container");
 
         const panel = document.createElement("div");
         panel.classList.add("tree-panel", "hidden");
@@ -346,7 +346,7 @@ export class World extends Scene {
         refresh.type = "button";
 
         const loader = document.createElement("div");
-        loader.classList.add("loader", "tree-loader", "hidden");
+        loader.classList.add("loader", "tree-loader");
 
         refresh.onclick = () => {
             this.addEventListener("issueLoaded", this.onIssueLoaded);
@@ -397,11 +397,42 @@ export class World extends Scene {
         closeTooltip.innerText = "Remove Tree";        
         close.appendChild(closeIcon);
         close.appendChild(closeTooltip);        
+
+        const swap = document.createElement("button");
+        swap.classList.add("tooltip");
+        swap.type = "button";
+        swap.onclick = () => {
+            // swap tree
+            const oldTree = cell.content as SeedTree;
+            this.trees.splice(this.trees.indexOf(oldTree), 1);
+            this.remove(oldTree);
+
+            loader.classList.remove('hidden');
+            panel.classList.add("hidden");            
+            icon.classList.add('hidden');
+
+            const newTree = new SeedTree(this.context, container, icon, panel, loader, refresh);
+            newTree.position.copy(cell.worldPos);
+            this.castOnSphere(newTree);
+            cell.content = newTree;
+            this.add(newTree);
+            this.trees.push(newTree);
+        };
+        const swapIcon = document.createElement("img");
+        swapIcon.src = "ui/tree.svg";
+        const swapTooltip = document.createElement("span");
+        swapTooltip.classList.add("tooltiptext");
+        swapTooltip.innerText = "Change Tree";        
+        swap.appendChild(swapIcon);
+        swap.appendChild(swapTooltip);
+
         controls.appendChild(refresh);
+        controls.appendChild(swap);
         controls.appendChild(close);
         panel.appendChild(controls);        
 
         const icon = document.createElement("img");
+        icon.classList.add("hidden");
         icon.src = "ui/jira-icon.png";
         icon.onclick = () => {
             panel.classList.toggle("hidden");
