@@ -25,13 +25,29 @@ export class SeedTree extends Object3D {
     public panel!: HTMLElement;
     public loader!: HTMLElement;
     public refresh!: HTMLElement;
-    private inFrontOfCamera = false;
+    private taskType: string;
+    // private inFrontOfCamera = false;
 
-    private static models: Record<string, Object3D> = {};
-    private static currentModel = 0;
-    private static modelCount = 5;
-    private static scales = [1, 1.5, 1, 1, 2];
-    private static texture: Texture;
+    // private static models: Record<string, Object3D> = {};
+
+    private static modelInfo: {
+        [type: string]: {
+            currentModel: number;
+            scales: number[];
+            models: Record<string, Object3D>;
+        }
+    } = {
+        tree: {
+            currentModel: 2,  
+            scales: [1.65, 1.8, 1.5, 1, 1.5],
+            models: {}
+        },
+        plant: {
+            currentModel: 0,      
+            scales: [10, 14, 5, 12],
+            models: {}
+        }
+    };   
 
     private static config = {
         seedAngularSpeed: 30,
@@ -39,13 +55,14 @@ export class SeedTree extends Object3D {
         seedHeight: 3
     };
 
-    constructor(context: IContext, container: HTMLElement, icon: HTMLElement, panel: HTMLElement, loader: HTMLElement, refresh: HTMLElement) {
+    constructor(context: IContext, container: HTMLElement, icon: HTMLElement, panel: HTMLElement, loader: HTMLElement, refresh: HTMLElement, type: string) {
         super();
         this.container = container;
         this.icon = icon;
         this.panel = panel;
         this.loader = loader;
         this.refresh = refresh;
+        this.taskType = type;
         this.context = context;
         
         this.load();
@@ -131,18 +148,19 @@ export class SeedTree extends Object3D {
 
     private async load() {
     
-        const currentModelIndex = SeedTree.currentModel;
-        SeedTree.currentModel = (currentModelIndex + 1) % SeedTree.modelCount;
-        let currentModel = SeedTree.models[currentModelIndex];        
+        const modelInfo = SeedTree.modelInfo[this.taskType as "tree"];
+        const currentModelIndex = modelInfo.currentModel;
+        modelInfo.currentModel = (currentModelIndex + 1) % modelInfo.scales.length;
+        let currentModel = modelInfo.models[currentModelIndex];        
         if (!currentModel) {
             // if (!SeedTree.texture) {
             //     SeedTree.texture = await new TextureLoader().loadAsync("assets/tree-texture.png");
             // }
 
-            const model = await Loaders.load(`assets/Tree_0${currentModelIndex + 1}.obj`, `assets/Tree_0${currentModelIndex + 1}.mtl`);
+            const model = await Loaders.load(`assets/${this.taskType}_0${currentModelIndex + 1}.obj`, `assets/${this.taskType}_0${currentModelIndex + 1}.mtl`);
             currentModel = model;
 
-            model.scale.setScalar(SeedTree.scales[currentModelIndex]);
+            model.scale.setScalar(modelInfo.scales[currentModelIndex]);
             model.traverse(c => {
                 c.castShadow = true;
                 // if ((c as Mesh).isMesh) {
@@ -151,7 +169,7 @@ export class SeedTree extends Object3D {
                 // }
             });
 
-            SeedTree.models[currentModelIndex] = model;
+            modelInfo.models[currentModelIndex] = model;
             // await new Promise(resolve => setTimeout(resolve, 2000));
         }        
         

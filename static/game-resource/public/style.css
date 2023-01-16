@@ -184,7 +184,8 @@ button:active {
 }
 
 .task-icons {
-
+    display: flex;
+    gap: 1vmin;
 }
 
 .task-icons img {
@@ -237,7 +238,7 @@ button:active {
     background-color: #3131315d;
     display: flex;
     flex-direction: column;
-    width: 30vmin;
+    width: 40vmin;
     gap: 2vmin;
     align-items: center;
     text-align: center;
@@ -250,8 +251,8 @@ button:active {
 }
 
 .tree-panel img {
-    width: 6vmin;
-    margin: 1vmin;
+    width: 5vmin;
+    margin: .6vmin;
 }
 
 .tree-controls {

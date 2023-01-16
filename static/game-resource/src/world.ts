@@ -18,12 +18,9 @@ import { Utils } from './utils';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import type { Cell } from './cell';
 
-type Action = "flower" | "bush" | "tree" | "water" | "none";
-
 interface IState {
     seedCount: number;
     coins: number;
-    action: Action;
     keys: Map<string, boolean>;
 }
 
@@ -42,11 +39,6 @@ export class World extends Scene {
     private terrain: Terrain;    
     private selectedCell: Cell | null = null; 
 
-    private flowers: Object3D[] = [];
-    private bushes: Object3D[] = [];
-    private flowerCells: Cell[] = [];
-    private bushCells: Cell[] = [];
-    private waterCells: Cell[] = [];
     private treeCells: Cell[] = [];
     
     private taskLoading = false;
@@ -56,8 +48,7 @@ export class World extends Scene {
 
     private state: IState = {
         seedCount: 0,
-        coins: 0,
-        action: "none",
+        coins: 0,        
         keys: new Map<string, boolean>()
     };
 
@@ -219,17 +210,31 @@ export class World extends Scene {
         buttonTree.type = "button";    
         buttonTree.onclick = () => {
             document.getElementById("task-panel")?.classList.add("hidden");
-            this.taskToPlant = task;
-            this.enterBuildMode("tree");
+            this.taskToPlant = {
+                ...task,
+                ...{ type: "tree" }
+            };
+            this.enterBuildMode();
         };    
         const buttonTreeIcon = document.createElement("img");
-        buttonTreeIcon.src = "ui/tree.svg";
-        // const buttonTreeTooltip = document.createElement("span");
-        // buttonTreeTooltip.classList.add("tooltiptext");
-        // buttonTreeTooltip.innerText = "Plant Tree";        
+        buttonTreeIcon.src = "ui/tree.svg";        
         buttonTree.appendChild(buttonTreeIcon);
-        // buttonTree.appendChild(buttonTreeTooltip);
+        const buttonPlant = document.createElement("button");
+        buttonPlant.classList.add("tooltip");
+        buttonPlant.type = "button";    
+        buttonPlant.onclick = () => {
+            document.getElementById("task-panel")?.classList.add("hidden");
+            this.taskToPlant = {
+                ...task,
+                ...{ type: "plant" }
+            };
+            this.enterBuildMode();
+        };    
+        const buttonPlantIcon = document.createElement("img");
+        buttonPlantIcon.src = "ui/flower.svg";        
+        buttonPlant.appendChild(buttonPlantIcon);
         taskIcons.appendChild(buttonTree);
+        taskIcons.appendChild(buttonPlant);
 
         taskElem.appendChild(key);
         taskElem.appendChild(summary);
@@ -262,35 +267,7 @@ export class World extends Scene {
     private castOnSphere(object: Object3D) {
         const { radius } = World.config;
         Utils.castOnSphere(object, radius);
-    }
-
-    private buildFlower(cell: Cell) { 
-        const flower = new Object3D();        
-        flower.position.copy(cell.worldPos);
-        this.castOnSphere(flower);
-        const flowerMesh = new Mesh(new BoxGeometry(.5, 2, .5), new MeshBasicMaterial({ color: 0x00ff00 }));
-        flowerMesh.position.y = 1;
-        flower.add(flowerMesh);
-        cell.content = flower;
-        this.add(flower);
-        this.flowers.push(flower);                    
-        this.state.seedCount--;
-        cell.mesh.material = Terrain.materials.invalid;        
-    }
-
-    private buildBush(cell: Cell) {
-        const bush = new Object3D();        
-        bush.position.copy(cell.worldPos);
-        this.castOnSphere(bush);
-        const bushMesh = new Mesh(new BoxGeometry(.5, 2, .5), new MeshBasicMaterial({ color: 0x0000ff }));
-        bushMesh.position.y = 1;
-        bush.add(bushMesh);
-        cell.content = bush;
-        this.add(bush);
-        this.bushes.push(bush);                    
-        this.state.seedCount--;
-        cell.mesh.material = Terrain.materials.invalid;
-    }
+    }    
 
     private onIssueLoaded(event: THREE.Event) {
         console.log("onIssueLoaded");
@@ -394,7 +371,7 @@ export class World extends Scene {
         closeIcon.src = "ui/close.svg";
         const closeTooltip = document.createElement("span");
         closeTooltip.classList.add("tooltiptext");
-        closeTooltip.innerText = "Remove Tree";        
+        closeTooltip.innerText = "Remove";        
         close.appendChild(closeIcon);
         close.appendChild(closeTooltip);        
 
@@ -411,12 +388,16 @@ export class World extends Scene {
             panel.classList.add("hidden");            
             icon.classList.add('hidden');
 
-            const newTree = new SeedTree(this.context, container, icon, panel, loader, refresh);
+            const newTree = new SeedTree(this.context, container, icon, panel, loader, refresh, "tree");
             newTree.position.copy(cell.worldPos);
             this.castOnSphere(newTree);
             cell.content = newTree;
             this.add(newTree);
             this.trees.push(newTree);
+
+            const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
+            plantedIssues[task.id].type = "tree";
+            localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
         };
         const swapIcon = document.createElement("img");
         swapIcon.src = "ui/tree.svg";
@@ -426,8 +407,42 @@ export class World extends Scene {
         swap.appendChild(swapIcon);
         swap.appendChild(swapTooltip);
 
+        // swap plant
+        const swapPlant = document.createElement("button");
+        swapPlant.classList.add("tooltip");
+        swapPlant.type = "button";
+        swapPlant.onclick = () => {
+            // swap plant
+            const oldTree = cell.content as SeedTree;
+            this.trees.splice(this.trees.indexOf(oldTree), 1);
+            this.remove(oldTree);
+
+            loader.classList.remove('hidden');
+            panel.classList.add("hidden");            
+            icon.classList.add('hidden');
+
+            const newTree = new SeedTree(this.context, container, icon, panel, loader, refresh, "plant");
+            newTree.position.copy(cell.worldPos);
+            this.castOnSphere(newTree);
+            cell.content = newTree;
+            this.add(newTree);
+            this.trees.push(newTree);
+
+            const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
+            plantedIssues[task.id].type = "plant";
+            localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
+        };
+        const swapPlantIcon = document.createElement("img");
+        swapPlantIcon.src = "ui/flower.svg";
+        const swapPlantTooltip = document.createElement("span");
+        swapPlantTooltip.classList.add("tooltiptext");
+        swapPlantTooltip.innerText = "Change Plant";        
+        swapPlant.appendChild(swapPlantIcon);
+        swapPlant.appendChild(swapPlantTooltip);
+
         controls.appendChild(refresh);
         controls.appendChild(swap);
+        controls.appendChild(swapPlant);
         controls.appendChild(close);
         panel.appendChild(controls);        
 
@@ -455,7 +470,7 @@ export class World extends Scene {
         
         hud.appendChild(container);
 
-        const tree = new SeedTree(this.context, container, icon, panel, loader, refresh);
+        const tree = new SeedTree(this.context, container, icon, panel, loader, refresh, task.type);
         tree.position.copy(cell.worldPos);
         this.castOnSphere(tree);
         cell.content = tree;
@@ -481,47 +496,33 @@ export class World extends Scene {
         if (raycast) {
 
             if (this.selectedCell) {
-                const canPlant = !this.selectedCell.content && this.selectedCell.valid[this.state.action];
+                const canPlant = !this.selectedCell.content && this.taskToPlant !== null;
                 if (canPlant) {
-                    console.log(`Planting ${this.taskToPlant}`);
-                    switch (this.state.action) {
-                        case "flower":
-                            this.buildFlower(this.selectedCell);
-                            break;
-                        case "bush":
-                            this.buildBush(this.selectedCell);
-                            break;
-                        case "tree":
-                            if (this.taskToPlant) {
-                                this.buildTree(this.selectedCell, this.taskToPlant);
-                            }
-                            break;                        
+                    const task = this.taskToPlant as ITask;
+                    console.log(`Planting ${task}`);
+                    this.buildTree(this.selectedCell, task);
+
+                    const taskList = document.getElementById("task-list") as HTMLElement;
+                    const taskElem = document.getElementById(`task-${task.key}`) as HTMLElement;
+                    taskList.removeChild(taskElem);
+
+                    const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
+                    plantedIssues[task.id] = {
+                        id: task.id,
+                        key: task.key,
+                        summary: task.summary,
+                        status: task.status,
+
+                        coords: this.selectedCell.coords.clone(),
+                        type: task.type
+                    } as ITask;
+                    localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
+
+                    if (taskList.children.length === 0) {
+                        document.getElementById("no-tasks")?.classList.remove("hidden");
                     }
 
-                    if (this.taskToPlant) {                       
-                        const taskList = document.getElementById("task-list") as HTMLElement;
-                        const taskElem = document.getElementById(`task-${this.taskToPlant.key}`) as HTMLElement;
-                        taskList.removeChild(taskElem);
-
-                        const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
-                        plantedIssues[this.taskToPlant.id] = {
-                            id: this.taskToPlant.id,
-                            key: this.taskToPlant.key,
-                            summary: this.taskToPlant.summary,
-                            status: this.taskToPlant.status,
-
-                            coords: this.selectedCell.coords.clone(),
-                            type: "tree"
-                        } as ITask;
-                        localStorage.setItem("planted-issues", JSON.stringify(plantedIssues));
-
-                        if (taskList.children.length === 0) {
-                            document.getElementById("no-tasks")?.classList.remove("hidden");
-                        }
-                        
-                        this.taskToPlant = null;
-                    }
-
+                    this.taskToPlant = null;
                     this.exitBuildMode();
                 }
             } else {
@@ -533,67 +534,17 @@ export class World extends Scene {
         }
     }    
 
-    private enterBuildMode(action: Action) {
+    private enterBuildMode() {
 
         this.exitBuildMode();       
 
-        switch (action) {
-            case "flower":
-                // if (!checkSeeds()) {
-                //     return;
-                // }
+        this.treeCells.forEach(cell => {
+            cell.visible = !Boolean(cell.content); // && cell.valid["tree"];
+            if (cell.visible) {
+                cell.mesh.material = Terrain.materials.valid;
+            }
+        });
 
-                this.flowerCells.forEach(cell => {
-                    cell.visible = !Boolean(cell.content);
-                    if (cell.visible) {
-                        cell.mesh.material = Terrain.materials.valid;
-                    }                    
-                });
-
-                break;
-            case "bush":
-                // if (!checkSeeds()) {
-                //     return;
-                // }
-                // if (!checkCoins(1)) {
-                //     return;
-                // }
-                this.bushCells.forEach(cell => {
-                    cell.visible = !Boolean(cell.content);
-                    if (cell.visible) {
-                        cell.mesh.material = Terrain.materials.valid;
-                    }
-                });
-                break;
-            case "tree":
-                // if (!checkSeeds()) {
-                //     return;
-                // }
-                // if (!checkCoins(2)) {
-                //     return;
-                // }
-                this.treeCells.forEach(cell => {
-                    cell.visible = !Boolean(cell.content); // && cell.valid["tree"];
-                    if (cell.visible) {
-                        cell.mesh.material = Terrain.materials.valid;
-                    }
-                });
-                break;
-            case "water":
-                // if (!checkCoins(3)) {
-                //     return;
-                // }
-
-                this.waterCells.forEach(cell => {
-                    cell.visible = !Boolean(cell.content) && cell.valid["water"];
-                    if (cell.visible) {
-                        cell.mesh.material = Terrain.materials.valid;
-                    }                    
-                });
-                break;
-        }        
-
-        this.state.action = action;
         this.cameraControls.freezeYaw = true;
     }
 
@@ -603,21 +554,7 @@ export class World extends Scene {
             this.selectedCell = null;
         }
         this.cameraControls.freezeYaw = false;
-        switch (this.state.action) {
-            case "flower":
-                this.flowerCells.forEach(cell => cell.visible = false);
-                break;
-            case "bush":
-                this.bushCells.forEach(cell => cell.visible = false);
-                break;
-            case "water":
-                this.waterCells.forEach(cell => cell.visible = false);
-                break;
-            case "tree":
-                this.treeCells.forEach(cell => cell.visible = false);
-                break;
-        }
-        this.state.action = "none";
+        this.treeCells.forEach(cell => cell.visible = false);
     }
 
     private updateCursor() {
@@ -631,18 +568,7 @@ export class World extends Scene {
         const [screenRay] = Utils.pool.ray;
         Utils.getScreenRay(event.clientX, event.clientY, this.context, screenRay);
 
-        if (this.state.action === "none") {
-            // check seeds
-            for (const seedTree of this.trees) {
-                const seed = seedTree.rayCast(screenRay);
-                if (seed) {
-                    if (this.cursor !== "grab") {
-                        this.cursor = "grab";
-                        this.context.domElement.style.cursor = this.cursor;
-                    }
-                    return;
-                }
-            }
+        if (this.taskToPlant === null) {            
             this.updateCursor();
             return;
         }        
@@ -658,7 +584,7 @@ export class World extends Scene {
                 if (cell !== this.selectedCell) {
                     const { valid, invalid, selected } = Terrain.materials;
                     if (this.selectedCell) {
-                        if (this.selectedCell.valid[this.state.action] && !Boolean(this.selectedCell.content)) {
+                        if (!Boolean(this.selectedCell.content)) {
                             this.selectedCell.visible = true;
                             this.selectedCell.mesh.material = valid;
                         } else {
@@ -667,13 +593,13 @@ export class World extends Scene {
                         }
                     }
                     
-                    cell.visible = !Boolean(cell.content);                                
-                    if (cell.valid[this.state.action]) {
+                    cell.visible = !Boolean(cell.content); 
+                    cell.mesh.material = selected;                               
+                    /*if (cell.valid[this.state.action]) {
                         cell.mesh.material = selected;
                     } else {
                         cell.mesh.material = invalid;
-                    }
-
+                    }*/
                     this.selectedCell = cell;
                 }
             }
