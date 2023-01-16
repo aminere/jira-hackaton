@@ -38,7 +38,7 @@ export class SeedTree extends Object3D {
         }
     } = {
         tree: {
-            currentModel: 2,  
+            currentModel: 0,  
             scales: [1.65, 1.8, 1.5, 1, 1.5],
             models: {}
         },
