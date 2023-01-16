@@ -104,7 +104,7 @@ Fonts.preload()
   .then(() => forgeInit())
   .then(() => (document.getElementById("ui") as HTMLElement).classList.remove("hidden"));
 
-const camera = new THREE.PerspectiveCamera(80, 1, .1, 100);
+const camera = new THREE.PerspectiveCamera(70, 1, .1, 100);
 const debugUI = new GUI();
 const clock = new THREE.Clock();
 debugUI.hide();
