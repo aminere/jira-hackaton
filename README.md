@@ -1,20 +1,12 @@
 [![Atlassian license](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
 
-## Devs unleashed - Forge app starter
+## Plant Seeds!
 
-This is a starter app for Devs Unleased hackathon.
+Entry for the Atlassian Devs Unleashed Hackaton on Devpost
 
-This starter which contains a [PhaserJS](https://phaser.io/) sample game inside a Global Page
-module. You can access the page from the top bar menu "Apps" once it's installed, both in Jira and
-in Confluence.
+## Play
 
-The game has examples of rendering project avatars from Jira and reading the spaces data in
-Confluence.
-
-## About Forge
-
-See [Atlassian Developer Forge space](https://developer.atlassian.com/platform/forge) for
-documentation and tutorials explaining Forge.
+Try it using the [JIRA App Installation Link](https://developer.atlassian.com/console/install/5300b83b-8258-42cc-9e8a-ed4ae3969a5c?signature=f97624e2f8ad63ad7c333735a8192bc91da938aa21afd469887efd6e458ff4a3&product=jirae)
 
 ## Requirements
 
@@ -23,67 +15,35 @@ documentation and tutorials explaining Forge.
 
 ## Quick start
 
--   Install dependencies by `yarn install`
+-   Install dependencies
 
 ```
 yarn install
 ```
 
--   Build both the UI modifications `static/ui-modifications` and admin panel `static/admin-page`
-    modules:
+-   Build:
 
 ```
 yarn build
 ```
 
--   Or watch changes when you're making modifications:
-
-```
-yarn watch
-```
-
--   You can also define specific modules if you're not changing both at the same time
-
-```
-yarn build:global-page
-```
-
-```
-yarn watch:global-page
-```
-
--   Register your app by running:
+-   Register for Atlassian cloud:
 
 ```
 forge register
 ```
 
--   Build and deploy your app by running:
+-   Deploy on Atlassian cloud:
 
 ```
 forge deploy
 ```
 
--   Install your app in an Atlassian site by running:
+-   Install in an Atlassian site:
 
 ```
 forge install
 ```
-
--   Develop your app by running `forge tunnel` to proxy invocations locally:
-
-```
-forge tunnel
-```
-
-### Notes
-
--   Use the `forge deploy` command when you want to persist code changes.
--   Use the `forge install` command when you want to install the app on a new site.
--   Once the app is installed on a site, the site picks up the new app changes you deploy without
-    needing to rerun the install command.
--   Use the `forge install --upgrade` command when you changed permissions scope in `manifest.yml`
-    to persist changes.
 
 ## License
 
