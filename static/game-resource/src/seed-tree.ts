@@ -1,5 +1,5 @@
 
-import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, TextureLoader, Vector3, MeshPhongMaterial, Texture } from "three";
+import { MathUtils, Mesh, MeshStandardMaterial, Object3D, Ray, SphereGeometry, Vector3 } from "three";
 import { Collision } from "./collision";
 
 import { IContext, ISeed } from "./types";

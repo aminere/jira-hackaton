@@ -7,7 +7,7 @@ import { Sky } from "three/examples/jsm/objects/Sky";
 import { CameraControls } from './camera-controls';
 import { Player } from './player';
 
-import { BoxGeometry, DirectionalLight, Line3, MathUtils, Mesh, MeshBasicMaterial, Object3D, Plane, Scene, Vector3 } from "three";
+import { DirectionalLight, Line3, MathUtils, Object3D, Plane, Scene, Vector3 } from "three";
 import { GUI } from "dat.gui";
 
 import { IContext, ITask } from './types';
