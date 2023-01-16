@@ -49,7 +49,7 @@ export class CameraControls {
         document.addEventListener('pointermove', this.onPointerMove);
         document.addEventListener('pointerover', this.onPointerOver);
         document.addEventListener('pointerleave', this.onPointerLeave);
-        document.addEventListener('wheel', this.onWheel);
+        props.context.domElement.addEventListener('wheel', this.onWheel);
 
         this.config.distFromTarget = MathUtils.lerp(2.3, 5, this.zoom);
         this.config.heightOffset = MathUtils.lerp(8.3, 30, this.zoom);
@@ -57,11 +57,11 @@ export class CameraControls {
     }
 
     public dispose() {
-        // const { context } = this.props;
+        const { context } = this.props;
         document.removeEventListener('pointermove', this.onPointerMove);
         document.removeEventListener('pointerover', this.onPointerOver);
         document.removeEventListener('pointerleave', this.onPointerLeave);
-        document.removeEventListener('wheel', this.onWheel);
+        context.domElement.removeEventListener('wheel', this.onWheel);
     }
 
     public update(deltaTime: number) {           

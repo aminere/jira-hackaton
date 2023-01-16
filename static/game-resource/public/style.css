@@ -166,11 +166,15 @@ button:active {
     margin: 1vmin;
 }
 
-#task-list {
+#task-list-container {
     overflow: auto;
     width: 100%;
     height: 100%;
     position: relative;
+}
+
+.task-list {
+    width: 100%;
 }
 
 .task {

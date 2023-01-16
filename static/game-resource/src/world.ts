@@ -172,7 +172,7 @@ export class World extends Scene {
     private refreshData() {
         console.log("Refreshing data");
         const taskList = document.getElementById("task-list") as HTMLElement;
-        taskList.innerHTML = "";
+        taskList.parentElement?.removeChild(taskList);
         document.getElementById("task-loading")?.classList.remove("hidden");
         document.getElementById("tasks")?.classList.add("hidden");
 
@@ -183,7 +183,7 @@ export class World extends Scene {
 
     private addTaskToList(task: ITask, taskList: HTMLElement) {
         const taskElem = document.createElement("div");
-        taskElem.id = `task-${task.key}`;
+        taskElem.id = `task-${task.id}`;
         taskElem.classList.add("task");
 
         const key = document.createElement("span");
@@ -209,12 +209,12 @@ export class World extends Scene {
         buttonTree.classList.add("tooltip");
         buttonTree.type = "button";    
         buttonTree.onclick = () => {
-            document.getElementById("task-panel")?.classList.add("hidden");
+            document.getElementById("task-panel")?.classList.add("hidden");            
             this.taskToPlant = {
                 ...task,
                 ...{ type: "tree" }
             };
-            this.enterBuildMode();
+            this.enterBuildMode();            
         };    
         const buttonTreeIcon = document.createElement("img");
         buttonTreeIcon.src = "ui/tree.svg";        
@@ -243,7 +243,12 @@ export class World extends Scene {
     }
 
     private fillTaskList(tasks: ITask[]) {
-        const taskList = document.getElementById("task-list") as HTMLElement;        
+        const container = document.getElementById("task-list-container") as HTMLElement;
+        const taskList = document.createElement("div"); 
+        taskList.id = "task-list";
+        taskList.classList.add("task-list");
+        container.appendChild(taskList);
+
         const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
 
         let availableTasks = 0;
@@ -503,7 +508,7 @@ export class World extends Scene {
                     this.buildTree(this.selectedCell, task);
 
                     const taskList = document.getElementById("task-list") as HTMLElement;
-                    const taskElem = document.getElementById(`task-${task.key}`) as HTMLElement;
+                    const taskElem = document.getElementById(`task-${task.id}`) as HTMLElement;
                     taskList.removeChild(taskElem);
 
                     const plantedIssues = JSON.parse(localStorage.getItem("planted-issues") ?? "{}");
@@ -521,8 +526,7 @@ export class World extends Scene {
                     if (taskList.children.length === 0) {
                         document.getElementById("no-tasks")?.classList.remove("hidden");
                     }
-
-                    this.taskToPlant = null;
+                    
                     this.exitBuildMode();
                 }
             } else {
@@ -535,16 +539,13 @@ export class World extends Scene {
     }    
 
     private enterBuildMode() {
-
-        this.exitBuildMode();       
-
         this.treeCells.forEach(cell => {
             cell.visible = !Boolean(cell.content); // && cell.valid["tree"];
             if (cell.visible) {
                 cell.mesh.material = Terrain.materials.valid;
             }
         });
-
+        
         this.cameraControls.freezeYaw = true;
     }
 
@@ -555,6 +556,7 @@ export class World extends Scene {
         }
         this.cameraControls.freezeYaw = false;
         this.treeCells.forEach(cell => cell.visible = false);
+        this.taskToPlant = null;
     }
 
     private updateCursor() {
