@@ -1,5 +1,7 @@
 [![Atlassian license](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
 
+![Thumbnail](thumbnail-small.png?raw=true)
+
 ## Plant Seeds!
 
 Entry for the Atlassian Devs Unleashed Hackaton on Devpost
