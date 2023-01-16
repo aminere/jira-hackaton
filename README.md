@@ -10,6 +10,11 @@ Entry for the Atlassian Devs Unleashed Hackaton on Devpost
 
 Try it using the [JIRA App Installation Link](https://developer.atlassian.com/console/install/5300b83b-8258-42cc-9e8a-ed4ae3969a5c?signature=f97624e2f8ad63ad7c333735a8192bc91da938aa21afd469887efd6e458ff4a3&product=jirae)
 
+## How to Play
+- Move by clicking on the ground
+- Look around by moving the cursor to the edges of the screen
+- Plant using the UI
+
 ## Requirements
 
 -   See [Set up Forge](https://developer.atlassian.com/platform/forge/set-up-forge/) for
